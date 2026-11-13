@@ -22,7 +22,7 @@ use macrostat_engine::profile::{self, ProfileConfig, MAX_PROFILE_BYTES};
 use macrostat_engine::trigger::TriggerEngine;
 
 #[cfg(windows)]
-use macrostat_engine::actions::{execute_actions, ActionContext, RandJitter};
+use macrostat_engine::actions::{execute_actions, release_all_keys, ActionContext, RandJitter};
 #[cfg(windows)]
 use std::collections::HashSet;
 
@@ -150,20 +150,23 @@ fn print_core_status(profile: &ProfileConfig) {
 }
 
 fn load_profile(path: Option<&str>) -> Result<ProfileConfig, String> {
+    use macrostat_engine::winutil::{read_text_limited, reject_reparse, ReadTextError};
+    use std::path::Path;
+
     let Some(path) = path else {
         return Ok(profile::default_profile());
     };
-    let metadata =
-        std::fs::metadata(path).map_err(|error| format!("Profil okunamadı ({path}): {error}"))?;
-    if metadata.len() > MAX_PROFILE_BYTES {
-        return Err(format!(
-            "Profil çok büyük ({path}): {} bayt, sınır {} bayt",
-            metadata.len(),
-            MAX_PROFILE_BYTES
-        ));
-    }
-    let contents = std::fs::read_to_string(path)
-        .map_err(|error| format!("Profil okunamadı ({path}): {error}"))?;
+    let file = Path::new(path);
+    // Profil kullanıcı tarafından düzenlenebilir; bağlantıya yönlendirilmiş
+    // ya da sınırı aşan bir belge motoru beslemez.
+    reject_reparse(file).map_err(|error| format!("Profil okunamadı ({path}): {error}"))?;
+    let contents = match read_text_limited(file, MAX_PROFILE_BYTES) {
+        Ok(contents) => contents,
+        Err(ReadTextError::TooLarge(limit)) => {
+            return Err(format!("Profil çok büyük ({path}): sınır {limit} bayt"))
+        }
+        Err(ReadTextError::Io(error)) => return Err(format!("Profil okunamadı ({path}): {error}")),
+    };
     profile::parse_profile(&contents)
         .ok_or_else(|| format!("Profil geçersiz JSON ya da şema dışı ({path})"))
 }
@@ -555,6 +558,13 @@ fn run_test_macro(profile: &ProfileConfig, target: &str) -> ExitCode {
     if !completed {
         eprintln!("[TEST] Eylemler iptal edildi; basılı tuşlar bırakıldı.");
         return ExitCode::from(5);
+    }
+    // Tek seferlik test makrosu da bırakma tuşlarıyla bitmeyebilir; basılı
+    // kalan tuşlar masaüstünü kilitlemesin diye burada açıkça bırakılır.
+    // `pressed` boşsa çağrı etkisizdir (iptal yolunda zaten boşaltılmıştır).
+    if !pressed.is_empty() {
+        release_all_keys(&mut injector, &mut pressed);
+        eprintln!("[TEST] Makro sonunda basılı kalan tuşlar bırakıldı.");
     }
     println!(
         "[TEST] Tamamlandı: {} olay denendi, {} eklendi, {} eksik.",

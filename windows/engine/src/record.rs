@@ -197,14 +197,11 @@ impl MousePathRecorder {
 }
 
 /// Symlink/junction ise yazmayı reddeder (hedef başka bir dosya olabilir).
+///
+/// Windows'ta junction'lar `is_symlink()` ile görünmez; ortak yardımcı
+/// `FILE_ATTRIBUTE_REPARSE_POINT` bayrağını da denetler.
 fn reject_link(path: &Path) -> std::io::Result<()> {
-    match std::fs::symlink_metadata(path) {
-        Ok(metadata) if metadata.file_type().is_symlink() => Err(std::io::Error::new(
-            std::io::ErrorKind::PermissionDenied,
-            "sembolik bağlantı reddedildi",
-        )),
-        _ => Ok(()),
-    }
+    crate::winutil::reject_reparse(path)
 }
 
 /// Atomic write: unique temp file then rename, so a crash never leaves a
@@ -490,5 +487,27 @@ mod tests {
             "empty buttons must be omitted like Linux"
         );
         assert_eq!(object["points"], serde_json::json!([[5, 2, 2]]));
+    }
+
+    #[test]
+    fn writing_through_a_symlink_is_refused() {
+        #[cfg(unix)]
+        {
+            let dir = std::env::temp_dir().join(format!("macrostat-record-{}", std::process::id()));
+            let _ = std::fs::remove_dir_all(&dir);
+            std::fs::create_dir_all(&dir).unwrap();
+            let target = dir.join("target.json");
+            std::fs::write(&target, b"keep").unwrap();
+            let link = dir.join("recording.json");
+            std::os::unix::fs::symlink(&target, &link).unwrap();
+
+            let t0 = Instant::now();
+            let recording = MousePathRecorder::new(None, t0).finish(t0);
+            let error = write_recording(&link, &recording).expect_err("symlink is refused");
+            assert_eq!(error.kind(), std::io::ErrorKind::PermissionDenied);
+            assert_eq!(std::fs::read(&target).unwrap(), b"keep");
+
+            let _ = std::fs::remove_dir_all(&dir);
+        }
     }
 }

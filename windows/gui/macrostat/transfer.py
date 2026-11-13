@@ -346,11 +346,13 @@ def import_payload(data, existing_macro_ids=(), existing_profile_ids=()):
 def load_payload(path):
     """JSON dosyasını boyut sınırıyla okur ve ayrıştırır."""
     try:
-        file_path = Path(path)
-        if file_path.stat().st_size > MAX_FILE_BYTES:
+        # Tek açışta, sınır kadardan fazlasını okuma: `stat` ile `read`
+        # arasında büyüyen bir dosya belleğe sınırsız alınmaz.
+        with open(Path(path), "rb") as handle:
+            raw = handle.read(MAX_FILE_BYTES + 1)
+        if len(raw) > MAX_FILE_BYTES:
             raise TransferError(_one_line(
                 T_("Dosya çok büyük (en fazla 5 MB).")))
-        raw = file_path.read_bytes()
     except TransferError:
         raise
     except OSError as exc:

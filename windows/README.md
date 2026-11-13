@@ -31,6 +31,7 @@ Bu dizin, MacroStat'ın Windows'a taşınmasına ait **tüm** çalışmayı bar�
 | [`reports/09-gap-analysis.md`](reports/09-gap-analysis.md) | Sorun/eksik incelemesi: düzeltmeler ve kalan maddeler |
 | [`reports/10-ci-hardening.md`](reports/10-ci-hardening.md) | CI/tedarik zinciri: SHA sabitleme, `audit` işi, paketleme bağımlılıkları |
 | [`reports/11-repo-prep.md`](reports/11-repo-prep.md) | Depo hazırlığı: kök dosyalar, etkin workflow, tetikleyiciler, audit politikası, preflight sertleştirmesi |
+| [`reports/12-security-audit.md`](reports/12-security-audit.md) | Kapsamlı güvenlik denetimi: bulgular, düzeltmeler, testler, kalan riskler |
 | [`RELEASE-NOTES-1.0.0.md`](RELEASE-NOTES-1.0.0.md) | 1.0.0 sürüm notları ve bilinen sınırlar |
 | [`docs/CI-RUNBOOK.md`](docs/CI-RUNBOOK.md) | İlk gerçek Windows CI koşusu için adım adım kılavuz |
 | [`docs/WINDOWS-ARCHITECTURE.md`](docs/WINDOWS-ARCHITECTURE.md) | Süreç modeli, modüller, iş parçacıkları, katman sınırları |

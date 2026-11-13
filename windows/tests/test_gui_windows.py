@@ -31,7 +31,7 @@ WINDOWS_DIR = GUI_DIR.parent
 if str(GUI_DIR) not in sys.path:
     sys.path.insert(0, str(GUI_DIR))
 
-from macrostat import common, recorder, settings, winplatform  # noqa: E402
+from macrostat import common, recorder, settings, transfer, winplatform  # noqa: E402
 from macrostat import i18n  # noqa: E402
 
 
@@ -175,6 +175,14 @@ class PrivateFileTests(unittest.TestCase):
         with self.assertRaises(OSError):
             common.read_private_bytes(self.path, max_bytes=16)
 
+    def test_growth_between_stat_and_read_is_bounded(self):
+        common.write_private_bytes(self.path, b"x")
+        # `stat` küçük dosyayı görür; okuma sırasında büyümüş olsaydı da
+        # sınır okunan baytlarda uygulanır.
+        with mock.patch("builtins.open", mock.mock_open(read_data=b"x" * 64)):
+            with self.assertRaises(OSError):
+                common.read_private_bytes(self.path, max_bytes=16)
+
     def test_bad_utf8_returns_none(self):
         common.write_private_bytes(self.path, b"\xff\xfe\x00")
         self.assertIsNone(common.read_private_text_file(self.path))
@@ -224,6 +232,65 @@ class SanitizerTests(unittest.TestCase):
         data = {"keys": [[-50, "KEY_A", 0]]}
         self.assertEqual(recorder.sanitize_key_events(data),
                          [[0, "KEY_A", 0]])
+
+
+class RecordDocumentTests(unittest.TestCase):
+    """Motorun yazdığı kayıt belgesini okuma sınırları."""
+
+    def setUp(self):
+        self.dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.dir.cleanup)
+        self.path = Path(self.dir.name) / "record.json"
+
+    def test_valid_document_is_parsed(self):
+        common.write_private_bytes(self.path, b'{"keys": [[1, "KEY_A", 1]]}')
+        self.assertEqual(recorder.load_record_document(self.path),
+                         {"keys": [[1, "KEY_A", 1]]})
+
+    def test_invalid_json_raises_value_error(self):
+        common.write_private_bytes(self.path, b"not json")
+        with self.assertRaises(ValueError):
+            recorder.load_record_document(self.path)
+
+    def test_oversize_document_is_refused(self):
+        common.write_private_bytes(self.path, b'{"keys":[]}')
+        with mock.patch.object(recorder, "_MAX_RECORD_FILE_BYTES", 4):
+            with self.assertRaises(OSError):
+                recorder.load_record_document(self.path)
+
+    def test_symlink_is_refused(self):
+        target = Path(self.dir.name) / "target.json"
+        common.write_private_bytes(target, b'{"keys":[]}')
+        try:
+            os.symlink(target, self.path)
+        except (OSError, NotImplementedError):
+            self.skipTest("symlink desteklenmiyor")
+        with self.assertRaises(OSError):
+            recorder.load_record_document(self.path)
+
+
+class TransferLoadTests(unittest.TestCase):
+    """İçe aktarma dosyası: sınırlı okuma ve ayrıştırma hataları."""
+
+    def setUp(self):
+        self.dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.dir.cleanup)
+        self.path = Path(self.dir.name) / "export.json"
+
+    def test_valid_json_is_loaded(self):
+        self.path.write_text('{"profiles": []}', encoding="utf-8")
+        self.assertEqual(transfer.load_payload(self.path), {"profiles": []})
+
+    def test_oversize_file_is_refused(self):
+        self.path.write_bytes(b"x" * 17)
+        with mock.patch.object(transfer, "MAX_FILE_BYTES", 16):
+            with self.assertRaises(transfer.TransferError):
+                transfer.load_payload(self.path)
+
+    def test_invalid_json_is_refused(self):
+        self.path.write_text("not json", encoding="utf-8")
+        with self.assertRaises(transfer.TransferError):
+            transfer.load_payload(self.path)
 
 
 class MergeInputTests(unittest.TestCase):

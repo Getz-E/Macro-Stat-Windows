@@ -261,6 +261,16 @@ pub fn pipe_name(sid: &str, token: &str) -> String {
     format!(r"\\.\pipe\macrostat-{sid}-{token}")
 }
 
+/// True when `sid` is safe to interpolate into an SDDL string.
+///
+/// A SID string is ASCII letters/digits and `-` only. Rejecting everything
+/// else keeps commas, semicolons and parentheses out of
+/// `D:P(A;;GA;;;<sid>)`, where they would change the parsed ACL instead of
+/// naming a trustee. Empty input is refused as well.
+pub fn sid_is_safe(sid: &str) -> bool {
+    !sid.is_empty() && sid.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-')
+}
+
 /// 128-bit random token as lowercase hex.
 pub fn random_token() -> String {
     use rand::RngCore;
@@ -277,6 +287,7 @@ pub fn random_token() -> String {
 pub enum IpcError {
     UnsupportedPlatform,
     MissingSid,
+    InvalidSid,
     SecurityDescriptor(u32),
     CreatePipe(u32),
     Thread(String),
@@ -288,6 +299,9 @@ impl std::fmt::Display for IpcError {
             IpcError::UnsupportedPlatform => f.write_str("named-pipe IPC requires Windows"),
             IpcError::MissingSid => {
                 f.write_str("current user SID unavailable; refusing to open the pipe")
+            }
+            IpcError::InvalidSid => {
+                f.write_str("current user SID has an unexpected format; refusing to open the pipe")
             }
             IpcError::SecurityDescriptor(code) => {
                 write!(f, "security descriptor error {code}")
@@ -329,6 +343,9 @@ pub fn start(state: std::sync::Arc<ControlState>) -> Result<IpcServer, IpcError>
         CreateNamedPipeW, PIPE_READMODE_BYTE, PIPE_REJECT_REMOTE_CLIENTS, PIPE_TYPE_BYTE, PIPE_WAIT,
     };
 
+    if !sid_is_safe(&state.sid) {
+        return Err(IpcError::InvalidSid);
+    }
     let sddl = format!("D:P(A;;GA;;;{})", state.sid);
     let name = crate::winutil::wide(&state.pipe_name);
     let sddl_wide = crate::winutil::wide(&sddl);
@@ -776,6 +793,19 @@ mod tests {
         for name in ["ping", "reload", "stop", "status"] {
             assert_eq!(Command::parse(name).map(Command::as_str), Some(name));
         }
+    }
+
+    #[test]
+    fn sddl_interpolation_rejects_unsafe_sids() {
+        assert!(sid_is_safe("S-1-5-21-1004336348-1177238915-682003330-1001"));
+        assert!(sid_is_safe("S-1-5-18"));
+        assert!(!sid_is_safe(""));
+        assert!(!sid_is_safe("S-1-5-21-1)"));
+        assert!(!sid_is_safe("S-1-5-21-1(A;;GA;;;WD"));
+        assert!(!sid_is_safe("S-1-5-21-1;"));
+        assert!(!sid_is_safe("S-1-5-21-1,WD"));
+        assert!(!sid_is_safe("S-1-5-21-1 "));
+        assert!(!sid_is_safe("S-1-5-21-1\n"));
     }
 
     #[test]

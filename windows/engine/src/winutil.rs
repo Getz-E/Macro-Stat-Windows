@@ -8,7 +8,7 @@
 //! the engine treats "could not measure" as an unknown, not as a crash.
 
 use std::fmt;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// `dwExtraInfo` marker written into every synthetic event.
 ///
@@ -78,6 +78,95 @@ pub fn wide(text: &str) -> Vec<u16> {
     let mut out: Vec<u16> = text.encode_utf16().take_while(|unit| *unit != 0).collect();
     out.push(0);
     out
+}
+
+/// Windows `FILE_ATTRIBUTE_REPARSE_POINT` (symlink, junction, mount point).
+pub const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x400;
+
+/// True when `path` itself is a symlink or (on Windows) any reparse point.
+///
+/// `symlink_metadata` is used so a link is reported even when its target is
+/// missing. Windows junctions and mount points are reparse points without the
+/// legacy "symlink" file type, which is why the attribute is checked as well;
+/// Rust's `is_symlink()` alone would let a junction through.
+pub fn is_reparse_point(path: &Path) -> bool {
+    match std::fs::symlink_metadata(path) {
+        Ok(metadata) => metadata_is_reparse(&metadata),
+        Err(_) => false,
+    }
+}
+
+#[cfg(windows)]
+fn metadata_is_reparse(metadata: &std::fs::Metadata) -> bool {
+    use std::os::windows::fs::MetadataExt;
+    metadata.file_type().is_symlink()
+        || metadata.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0
+}
+
+#[cfg(not(windows))]
+fn metadata_is_reparse(metadata: &std::fs::Metadata) -> bool {
+    metadata.file_type().is_symlink()
+}
+
+/// Reject a path that is (or has become) a reparse point.
+pub fn reject_reparse(path: &Path) -> std::io::Result<()> {
+    if is_reparse_point(path) {
+        Err(std::io::Error::new(
+            std::io::ErrorKind::PermissionDenied,
+            "yeniden ayrıştırma noktası reddedildi",
+        ))
+    } else {
+        Ok(())
+    }
+}
+
+/// Why [`read_text_limited`] failed.
+#[derive(Debug)]
+pub enum ReadTextError {
+    /// The file is larger than the caller's limit.
+    TooLarge(u64),
+    /// Open/read failed, or the bytes are not valid UTF-8.
+    Io(std::io::Error),
+}
+
+impl fmt::Display for ReadTextError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ReadTextError::TooLarge(limit) => {
+                write!(f, "dosya boyut sınırını aşıyor (sınır {limit} bayt)")
+            }
+            ReadTextError::Io(error) => error.fmt(f),
+        }
+    }
+}
+
+impl std::error::Error for ReadTextError {}
+
+impl From<std::io::Error> for ReadTextError {
+    fn from(error: std::io::Error) -> Self {
+        ReadTextError::Io(error)
+    }
+}
+
+/// Read at most `max_bytes` of UTF-8 text from a single open file handle.
+///
+/// The bound is enforced both from the handle's metadata and again on the
+/// bytes actually read (`take(max + 1)`), so a file that grows after the
+/// metadata check is still refused. The error never contains file content.
+pub fn read_text_limited(path: &Path, max_bytes: u64) -> Result<String, ReadTextError> {
+    use std::io::Read;
+
+    let file = std::fs::File::open(path)?;
+    let metadata = file.metadata()?;
+    if metadata.len() > max_bytes {
+        return Err(ReadTextError::TooLarge(max_bytes));
+    }
+    let mut text = String::new();
+    file.take(max_bytes + 1).read_to_string(&mut text)?;
+    if text.len() as u64 > max_bytes {
+        return Err(ReadTextError::TooLarge(max_bytes));
+    }
+    Ok(text)
 }
 
 /// Numeric description of the last Win32 error (no locale-dependent text).
@@ -546,5 +635,54 @@ mod tests {
             (INJECTION_SIGNATURE as u32).to_le_bytes(),
             [b'M', b'S', b'T', b'A']
         );
+    }
+
+    fn scratch_dir(name: &str) -> PathBuf {
+        let dir =
+            std::env::temp_dir().join(format!("macrostat-winutil-{}-{}", name, std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).expect("scratch dir");
+        dir
+    }
+
+    #[test]
+    fn reparse_helpers_detect_links_but_allow_regular_files() {
+        let dir = scratch_dir("reparse");
+        let real = dir.join("real.json");
+        std::fs::write(&real, b"{\"ok\":true}").expect("write");
+
+        assert!(!is_reparse_point(&real));
+        assert!(!is_reparse_point(&dir.join("missing.json")));
+        assert!(reject_reparse(&real).is_ok());
+
+        #[cfg(unix)]
+        {
+            let link = dir.join("link.json");
+            std::os::unix::fs::symlink(&real, &link).expect("symlink");
+            assert!(is_reparse_point(&link));
+            let error = reject_reparse(&link).expect_err("symlink must be refused");
+            assert_eq!(error.kind(), std::io::ErrorKind::PermissionDenied);
+        }
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn text_reader_enforces_the_byte_limit() {
+        let dir = scratch_dir("bounded");
+        let path = dir.join("document.json");
+        std::fs::write(&path, b"12345678").expect("write");
+
+        assert_eq!(read_text_limited(&path, 8).expect("fits"), "12345678");
+        match read_text_limited(&path, 7) {
+            Err(ReadTextError::TooLarge(limit)) => assert_eq!(limit, 7),
+            other => panic!("unexpected result: {other:?}"),
+        }
+        assert!(matches!(
+            read_text_limited(&dir.join("missing.json"), 8),
+            Err(ReadTextError::Io(_))
+        ));
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

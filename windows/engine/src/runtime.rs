@@ -69,13 +69,7 @@ pub const MAX_RUNTIME_BYTES: u64 = 64 * 1024;
 
 /// Yeniden ayrıştırma noktası (symlink/junction) ise hata döndürür.
 fn reject_reparse(path: &Path) -> std::io::Result<()> {
-    match std::fs::symlink_metadata(path) {
-        Ok(metadata) if metadata.file_type().is_symlink() => Err(std::io::Error::new(
-            std::io::ErrorKind::PermissionDenied,
-            "yeniden ayrıştırma noktası reddedildi",
-        )),
-        _ => Ok(()),
-    }
+    crate::winutil::reject_reparse(path)
 }
 
 /// `runtime.json` dosyasına yalnızca geçerli kullanıcının erişebildiği
@@ -90,7 +84,7 @@ fn protect_runtime_acl(path: &Path, sid: &str) -> bool {
         PSECURITY_DESCRIPTOR,
     };
 
-    if sid.is_empty() || !sid.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-') {
+    if !crate::ipc::sid_is_safe(sid) {
         return false;
     }
     let sddl = crate::winutil::wide(&format!("D:P(A;;FA;;;{sid})"));
@@ -227,21 +221,28 @@ pub fn validate_runtime_info(info: &RuntimeInfo) -> Result<(), String> {
 /// `None` means the built-in default profile; a missing or invalid document
 /// is an error so the caller can keep the current profile on reload.
 pub fn load_profile(path: Option<&Path>) -> Result<ProfileConfig, String> {
+    use crate::winutil::ReadTextError;
+
     let Some(path) = path else {
         return Ok(profile::default_profile());
     };
-    let metadata = std::fs::metadata(path)
+    // Profil kullanıcı tarafından düzenlenebilir; bağlantı noktasına
+    // yönlendirilmiş ya da sınırı aşan bir belge motoru beslemez.
+    crate::winutil::reject_reparse(path)
         .map_err(|error| format!("Profil okunamadı ({}): {error}", path.display()))?;
-    if metadata.len() > MAX_PROFILE_BYTES {
-        return Err(format!(
-            "Profil çok büyük ({}): {} bayt, sınır {} bayt",
-            path.display(),
-            metadata.len(),
-            MAX_PROFILE_BYTES
-        ));
-    }
-    let contents = std::fs::read_to_string(path)
-        .map_err(|error| format!("Profil okunamadı ({}): {error}", path.display()))?;
+    let contents = match crate::winutil::read_text_limited(path, MAX_PROFILE_BYTES) {
+        Ok(contents) => contents,
+        Err(ReadTextError::TooLarge(limit)) => {
+            return Err(format!(
+                "Profil çok büyük ({}): sınır {} bayt",
+                path.display(),
+                limit
+            ))
+        }
+        Err(ReadTextError::Io(error)) => {
+            return Err(format!("Profil okunamadı ({}): {error}", path.display()))
+        }
+    };
     profile::parse_profile(&contents)
         .ok_or_else(|| format!("Profil geçersiz JSON ya da şema dışı ({})", path.display()))
 }

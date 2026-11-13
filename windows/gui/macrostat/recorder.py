@@ -24,6 +24,22 @@ _MOUSE_BUTTON_NAMES = frozenset(
 _MAX_MOUSE_POINTS = 200_000
 _MAX_MOUSE_DT_MS = 600_000
 _MAX_KEY_EVENTS = 200_000
+#: Motorun yazdığı kayıt belgesi için üst sınır (GUI profil sınırıyla aynı).
+_MAX_RECORD_FILE_BYTES = 32 * 1024 * 1024
+
+
+def load_record_document(path):
+    """Kayıt dosyasını sınırlı boyutta ve bağlantı reddiyle okur.
+
+    Dosya `%LOCALAPPDATA%\\MacroStat` altında motor tarafından yazılır;
+    yine de kullanıcıya ait bir dizindir. Yeniden ayrıştırma noktasına
+    çevrilmiş ya da beklenenden büyük bir dosya ayrıştırılmaz.
+    """
+    raw = common.read_private_bytes(path, max_bytes=_MAX_RECORD_FILE_BYTES)
+    try:
+        return json.loads(raw.decode("utf-8"))
+    except UnicodeDecodeError as exc:
+        raise ValueError(str(exc)) from exc
 
 
 def _sanitize_channel(data, field, allowed, limit=_MAX_KEY_EVENTS):
@@ -433,8 +449,7 @@ class RecorderMixin:
         path = self._input_record_file
         if path and Path(path).exists():
             try:
-                with open(path, "r", encoding="utf-8") as handle:
-                    data = json.load(handle)
+                data = load_record_document(path)
                 points = self._sanitize_mouse_path(data)
                 buttons = sanitize_mouse_buttons(data)
                 keys = sanitize_key_events(data)

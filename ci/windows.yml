@@ -159,7 +159,7 @@ jobs:
           cargo audit --deny warnings --file windows/engine/Cargo.lock
       - name: pip-audit
         run: |
-          python -m pip install pip-audit
+          python -m pip install "pip-audit>=2.7,<3"
           python -m pip_audit --strict -r windows/gui/requirements-win.txt
 
   sign:

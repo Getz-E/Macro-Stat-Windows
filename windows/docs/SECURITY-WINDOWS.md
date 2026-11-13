@@ -29,7 +29,7 @@ Bu belge Linux `SECURITY.md` tehdit modelinin Windows karşılığını ve Windo
 | Panik tuşunun dolu kuyrukta yutulması | Motor durdurulamaz | Kanca geri çağrısında atomik mandal (`take_panic_press`) | Var |
 | Kötü niyetli profil sınır taşması | DoS / istenmeyen eylem | `sanitize_limits`: 500 makro, 2000 eylem, kırpılmış metin/süre/koordinat | Var |
 | DLL arama sırası istismarı | Kod çalıştırma | `SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_SYSTEM32 \| LOAD_LIBRARY_SEARCH_APPLICATION_DIR)`, tam yol `LoadLibraryEx`, PATH araması yok | Faz 2 |
-| Profil/ayar dosyasına sembolik bağ/reparse point | Yetkisiz yazma | Reparse point reddi; atomik yazma; `runtime.json` için korumalı DACL | Var |
+| Profil/ayar dosyasına sembolik bağ/reparse point | Yetkisiz yazma | Reparse point reddi (symlink **ve** junction: `FILE_ATTRIBUTE_REPARSE_POINT`); atomik yazma; `runtime.json` için korumalı DACL | Var |
 | Günlükten bilgi sızması | Gizlilik | Tuş içeriği loglanmaz; yalnızca olay adı/hata; kullanıcı ACL'i | Faz 3 |
 | Yükseltilmiş hedefe enjeksiyon denemesi | Sessiz başarısızlık | UIPI farkındalığı: bütünlük düzeyi önsezisi + rozet + günlük; engel `GetLastError` ile algılanamaz | Faz 2 |
 | Güvenli masaüstünde çalışma beklentisi | Yanlış güvenlik beklentisi | Belgelenir; UAC/kilit ekranında eylem durur, tuşlar bırakılır | Faz 2 |

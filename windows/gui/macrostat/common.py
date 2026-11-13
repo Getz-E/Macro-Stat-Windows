@@ -208,7 +208,13 @@ def read_private_bytes(path, max_bytes=MAX_PROFILE_BYTES):
         raise OSError(T("Dosya çok büyük: {} bayt > {}").format(
             info.st_size, max_bytes))
     with open(path, "rb") as handle:
-        return handle.read(max_bytes + 1)
+        data = handle.read(max_bytes + 1)
+    # `stat` ile `read` arasında dosya büyüyebilir; sınırı okunan baytlarda
+    # da uygula, böylece çağıranlar aşırı büyük veri görmez.
+    if len(data) > max_bytes:
+        raise OSError(T("Dosya çok büyük: {} bayt > {}").format(
+            len(data), max_bytes))
+    return data
 
 
 def read_private_text_file(path, max_bytes=MAX_PROFILE_BYTES):

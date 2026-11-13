@@ -374,8 +374,9 @@ class CoreMixin:
         self.all_profiles = []
         self.active_profile_id = ""
         if common.PROFILE_PATH.exists() or common.PROFILE_PATH.is_symlink():
-            # Motorla aynı güvenli okuma: O_NOFOLLOW, yalnızca normal dosya,
-            # 32 MiB sınırı. Profil dosyası başka bir hedefe işaret edemez.
+            # Motorla aynı güvenli okuma: yeniden ayrıştırma noktası reddi
+            # (Windows'ta O_NOFOLLOW yok), yalnızca normal dosya, 32 MiB
+            # sınırı. Profil dosyası başka bir hedefe işaret edemez.
             data = _load_profile_json(common.PROFILE_PATH)
             if data is None:
                 print("[UYARI] profile.json okunamadı; varsayılan profil "
