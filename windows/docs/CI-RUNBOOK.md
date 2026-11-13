@@ -10,7 +10,7 @@ yalnızca bağımlılık kurulumu ve artefakt yüklemesi için ağ kullanır.
   `ci/windows.yml` ile **birebir aynı** olmalıdır. `ci/preflight.py` kopyaların
   eşitliğini, iş grafiğini ve SHA sabitlemelerini denetler.
 - Depo kökünde `ci/preflight.py` çalışır durumda olmalı:
-  `python ci/preflight.py` → `CI ön kontrolü geçti`.
+  `python ci/preflight.py` → `CI on kontrolu gecti`.
 - `vars.SIGNING_ENABLED` tanımlı **değilse** imza işi atlanır; bu beklenen
   durumdur (sertifika yok).
 

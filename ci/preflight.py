@@ -268,7 +268,21 @@ def check_workflow(problems, data, text):
     check_triggers(problems, data)
 
 
+def _use_utf8_stdio():
+    """Use UTF-8 for redirected output on Windows.
+
+    CI captures stdout with a legacy code page (cp1252) where Turkish
+    characters raise `UnicodeEncodeError`; Actions logs themselves are UTF-8.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
+
+
 def main():
+    _use_utf8_stdio()
     problems = []
     check_files(problems)
     check_versions(problems)
@@ -282,7 +296,7 @@ def main():
         for problem in problems:
             print(f" - {problem}")
         return 1
-    print("CI ön kontrolü geçti: dosyalar, sürümler, iş akışı kopyası, YAML grafiği ve SHA sabitlemeleri tutarlı.")
+    print("CI on kontrolu gecti: dosyalar, surumler, is akisi kopyasi, YAML grafigi ve SHA sabitlemeleri tutarli.")
     return 0
 
 

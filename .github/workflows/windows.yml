@@ -63,6 +63,10 @@ jobs:
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
         with:
           components: rustfmt, clippy
+      # `gen_keymap.py` requires rustfmt on PATH; installing it explicitly
+      # keeps the generator deterministic on the Windows runner.
+      - name: Ensure rustfmt is installed
+        run: rustup component add rustfmt
       - name: Keymap generator is reproducible
         run: python tools/gen_keymap.py --check
       - name: Format

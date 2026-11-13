@@ -17,6 +17,7 @@ Usage: python3 tools/gen_keymap.py [--check]
 
 from __future__ import annotations
 
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -634,23 +635,59 @@ mod tests {{
 '''
 
 
-def format_source(source: str) -> str:
-    """Format with rustfmt so `--check` is stable after `cargo fmt`.
+def resolve_rustfmt() -> list[str] | None:
+    """Locate rustfmt, falling back to rustup when it is not on PATH.
 
-    If rustfmt is unavailable the generated text is written unformatted;
-    running `cargo fmt` afterwards is part of the documented workflow.
+    GitHub Actions installs the component with `rustup component add rustfmt`,
+    but the proxy directory is not guaranteed to be first on PATH (and some
+    images only expose `rustup`). Resolving through rustup keeps the generator
+    deterministic instead of silently emitting unformatted source.
     """
+    found = shutil.which("rustfmt")
+    if found:
+        return [found]
+    rustup = shutil.which("rustup")
+    if rustup:
+        try:
+            resolved = subprocess.run(
+                [rustup, "which", "rustfmt"],
+                text=True,
+                capture_output=True,
+                check=True,
+            )
+        except (OSError, subprocess.CalledProcessError):
+            return None
+        path = resolved.stdout.strip()
+        if path and Path(path).is_file():
+            return [path]
+    return None
+
+
+def format_source(source: str) -> str:
+    """Format with rustfmt so `--check` matches `cargo fmt`.
+
+    A missing or failing rustfmt is a hard error: writing or comparing
+    unformatted output would make the check depend on the environment and
+    produce a misleading "out of date" result. CI installs the component in
+    the `core` job (`rustup component add rustfmt`).
+    """
+    command = resolve_rustfmt()
+    if command is None:
+        raise SystemExit(
+            "rustfmt not found; install it with `rustup component add rustfmt` "
+            "before running tools/gen_keymap.py"
+        )
     try:
         result = subprocess.run(
-            ["rustfmt", "--edition", "2021", "--emit", "stdout"],
+            command + ["--edition", "2021", "--emit", "stdout"],
             input=source,
             text=True,
             capture_output=True,
             check=True,
         )
-    except (OSError, subprocess.CalledProcessError):
-        print("warning: rustfmt not available; output is unformatted", file=sys.stderr)
-        return source
+    except (OSError, subprocess.CalledProcessError) as error:
+        detail = getattr(error, "stderr", "") or str(error)
+        raise SystemExit(f"rustfmt failed: {detail.strip()}")
     return result.stdout
 
 
