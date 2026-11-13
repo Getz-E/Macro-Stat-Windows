@@ -1,0 +1,138 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://macrostat.local/schema/profile-v1.json",
+  "title": "MacroStat profile",
+  "description": "MacroStat profile/preset contract v1 (frozen in Phase 0). Readers tolerate unknown fields; writers should not emit them.",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1,
+      "description": "Writer emits 1. The engine does not validate this value."
+    },
+    "activeProfileId": {
+      "type": ["string", "null"],
+      "description": "Must reference an id in profiles when set."
+    },
+    "profiles": {
+      "type": "array",
+      "maxItems": 100,
+      "items": { "$ref": "#/$defs/profile" }
+    }
+  },
+  "required": ["schemaVersion", "profiles"],
+  "additionalProperties": true,
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,64}$"
+    },
+    "keyName": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_]{1,32}$",
+      "description": "One token of triggerKey / key / mouseButton. See KEY-DICTIONARY.tsv."
+    },
+    "text": {
+      "type": "string",
+      "maxLength": 65536,
+      "description": "UTF-8 text for the TEXT action. 65536 is the byte limit; the schema approximates it with code points."
+    },
+    "action": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": {
+          "type": "string",
+          "enum": [
+            "KEY_DOWN", "KEY_UP", "KEY_TAP",
+            "MOUSE_DOWN", "MOUSE_UP", "MOUSE_CLICK", "MOUSE_MOVE",
+            "MOUSE_SCROLL", "MOUSE_PATH", "TEXT", "DELAY"
+          ]
+        },
+        "key": { "$ref": "#/$defs/keyName" },
+        "mouseButton": { "$ref": "#/$defs/keyName" },
+        "delayMs": { "type": "integer", "minimum": 0, "maximum": 600000 },
+        "jitterMs": { "type": "integer", "minimum": 0, "maximum": 60000 },
+        "text": { "$ref": "#/$defs/text" },
+        "dx": { "type": "integer", "minimum": -1000000, "maximum": 1000000 },
+        "dy": { "type": "integer", "minimum": -1000000, "maximum": 1000000 },
+        "scrollDelta": { "type": "integer", "minimum": -1000000, "maximum": 1000000 },
+        "points": {
+          "type": "array",
+          "maxItems": 200000,
+          "description": "[elapsed_ms, dx, dy] triples used by MOUSE_PATH.",
+          "items": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "items": [
+              { "type": "integer", "minimum": 0, "maximum": 600000 },
+              { "type": "integer", "minimum": -1000000, "maximum": 1000000 },
+              { "type": "integer", "minimum": -1000000, "maximum": 1000000 }
+            ]
+          }
+        },
+        "start": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": [
+            { "type": "integer", "minimum": -1000000, "maximum": 1000000 },
+            { "type": "integer", "minimum": -1000000, "maximum": 1000000 }
+          ]
+        }
+      },
+      "required": ["type"],
+      "additionalProperties": true
+    },
+    "macro": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Empty or a valid id; the engine falls back to idx-<index>." },
+        "name": { "type": "string", "maxLength": 200 },
+        "description": { "type": "string", "maxLength": 4000 },
+        "enabled": { "type": "boolean", "default": true },
+        "triggerKey": {
+          "type": "string",
+          "description": "One token or tokens joined with '+'. Invalid triggers skip the macro with a warning."
+        },
+        "triggerMode": {
+          "type": "string",
+          "enum": [
+            "ONCE", "WHILE_HELD", "TOGGLE_LOOP", "REPEAT_COUNT",
+            "DOUBLE_TAP", "HOLD_LONG_PRESS", "PRESS_AND_RELEASE"
+          ],
+          "default": "ONCE"
+        },
+        "repeatCount": { "type": "integer", "minimum": 1, "maximum": 9999, "default": 1 },
+        "doubleTapTimeoutMs": { "type": "integer", "minimum": 50, "maximum": 5000, "default": 300 },
+        "holdDurationMs": { "type": "integer", "minimum": 50, "maximum": 10000, "default": 300 },
+        "actions": { "type": "array", "items": { "$ref": "#/$defs/action" } },
+        "releaseActions": { "type": "array", "items": { "$ref": "#/$defs/action" } },
+        "createdAt": { "type": "integer", "minimum": 0 },
+        "updatedAt": { "type": "integer", "minimum": 0 }
+      },
+      "required": ["actions"],
+      "additionalProperties": true
+    },
+    "profile": {
+      "type": "object",
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "type": "string", "maxLength": 200 },
+        "description": { "type": "string", "maxLength": 4000 },
+        "panicKey": { "type": "string" },
+        "restartKey": { "type": "string" },
+        "virtualDeviceName": { "type": "string", "maxLength": 80 },
+        "defaultJitterMs": { "type": "integer", "minimum": 0, "maximum": 1000, "default": 2 },
+        "macros": {
+          "type": "array",
+          "maxItems": 500,
+          "items": { "$ref": "#/$defs/macro" }
+        }
+      },
+      "required": ["id", "macros"],
+      "additionalProperties": true
+    }
+  }
+}

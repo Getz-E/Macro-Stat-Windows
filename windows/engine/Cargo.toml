@@ -1,0 +1,42 @@
+[package]
+name = "macrostat-engine"
+version = "1.0.0"
+edition = "2021"
+rust-version = "1.79"
+authors = ["MacroStat Author"]
+description = "Offline macro engine for Windows (SendInput + low-level hooks)"
+license = "GPL-3.0-or-later"
+publish = false
+
+# Çekirdek bağımlılıkları (platformdan bağımsız).
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+rand = "0.8"
+
+# Windows API katmanı. `windows-sys` (ham FFI) seçildi: yalnızca kullanılan
+# imzaları bağlar, ara katman yoktur ve 0.61 sürümü MSRV 1.71 ile uyumludur.
+# `windows` (üst düzey sarmalayıcı) yerine bu crate'in yeterli olması Faz 2
+# kararıdır; bkz. reports/02-input-backend.md.
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_Media",
+    "Win32_Security",
+    "Win32_Security_Authorization",
+    "Win32_Storage_FileSystem",
+    "Win32_System_IO",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Pipes",
+    "Win32_System_Threading",
+    "Win32_UI_HiDpi",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_WindowsAndMessaging",
+] }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

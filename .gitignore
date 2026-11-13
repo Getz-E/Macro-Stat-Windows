@@ -1,0 +1,37 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Derleme çıktıları ve yerel durum — sürüm kontrolüne girmemeli.
+
+# Rust
+windows/engine/target/
+
+# PyInstaller / Inno Setup / paketleme çıktıları
+windows/dist/
+windows/build/
+
+# İmza malzemesi — asla depoya girmez
+*.pfx
+*.p12
+
+# Python
+**/__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.venv/
+venv/
+
+# Linux ağacı bu depoya dahil değildir; yanlışlıkla eklenmesin.
+linux/
+
+# Editör / işletim sistemi
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# Ek hassas dosyalar
+.env
+.env.*
+!.env.example
+*.pem
+*.key

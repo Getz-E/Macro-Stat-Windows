@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Paketleme bağımlılıkları (CI `build` işi ve yerel derleme). Çalışma zamanı
+# bağımlılıkları aşağıdaki `-r` satırıyla birlikte kurulur.
+-r requirements-win.txt
+
+# PyInstaller 6.x. Alt sınır Windows 10/11 ve Python 3.12 desteği içindir;
+# üst sınır 7.x uyumluluk kırılmalarını engeller. İlk yeşil Windows CI
+# koşusundan sonra bu aralık çözülen tam sürüme sabitlenmelidir.
+pyinstaller>=6.0,<7

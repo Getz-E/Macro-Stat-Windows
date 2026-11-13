@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 MacroStat contributors
+#
+# `ci/preflight.py` iş akışını YAML olarak ayrıştırmak için PyYAML kullanır.
+# Ürünün çalışma zamanı bağımlılığı DEĞİLDİR; yalnızca CI ve yerel denetim
+# içindir. CI `gui-tests` işi preflight'tan önce bu dosyayı kurar.
+PyYAML>=6,<7

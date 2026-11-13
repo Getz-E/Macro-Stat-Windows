@@ -1,0 +1,100 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# ============================================================================
+# TARİHSEL TASLAK — KULLANILMIYOR.
+#
+# Etkin iş akışı `ci/windows.yml` dosyasıdır ve birebir kopyası
+# `.github/workflows/windows.yml` altında çalışır. Bu dosya yalnızca Faz 0
+# kanıtı olarak saklanır; bu dosyaya hiçbir yerde referans verilmez ve build/e2e/audit/
+# sign işlerini içermez.
+#
+# BU DOSYAYI `.github/workflows/` ALTINA KOPYALAMAYIN.
+# ============================================================================
+# GitHub Actions taslağı — Faz 0.
+name: windows
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "windows/**"
+      - ".github/workflows/windows.yml"
+  pull_request:
+    paths:
+      - "windows/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  core:
+    name: Engine core (fmt / clippy / test)
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: windows/engine
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Keymap generator is reproducible
+        run: python tools/gen_keymap.py --check
+      - name: Format
+        run: cargo fmt --all -- --check
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
+      - name: Test
+        run: cargo test --all
+
+  gui-tests:
+    name: GUI unit tests
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: python -m pip install -r windows/gui/requirements-win.txt
+      - name: Run tests (offscreen)
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          if (Test-Path windows/tests) {
+            python -m unittest discover -s windows/tests -v
+          } else {
+            Write-Host "No Windows tests yet (Phase 3+)."
+          }
+
+  # Faz 5'te etkinleştirilecek taslak:
+  # build:
+  #   needs: [core, gui-tests]
+  #   runs-on: windows-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Rust release
+  #       run: cargo build --release --all
+  #       working-directory: windows/engine
+  #     - name: PyInstaller
+  #       run: pyinstaller windows/gui/MacroStat.spec
+  #     - name: Inno Setup
+  #       run: iscc windows/installer/MacroStat.iss
+  #     - name: Checksums
+  #       run: Get-FileHash -Algorithm SHA256 dist/* > dist/SHA256SUMS.txt
+  #     - uses: actions/upload-artifact@v4
+  #       with:
+  #         name: macrostat-win-x64
+  #         path: dist/
+  #
+  # sign:
+  #   needs: build
+  #   if: vars.SIGNING_ENABLED == 'true'
+  #   environment: signing   # required reviewers; secrets never exposed to forks
+  #   runs-on: windows-latest
+  #   steps:
+  #     - name: signtool
+  #       run: ./windows/scripts/sign.ps1
