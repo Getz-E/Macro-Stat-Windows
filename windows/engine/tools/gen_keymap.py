@@ -670,6 +670,10 @@ def format_source(source: str) -> str:
     unformatted output would make the check depend on the environment and
     produce a misleading "out of date" result. CI installs the component in
     the `core` job (`rustup component add rustfmt`).
+
+    Source and output are exchanged as explicit UTF-8 bytes. Text mode would
+    use the platform default encoding (e.g. cp1252 on the Windows runner),
+    which rustfmt rejects with "stream did not contain valid UTF-8".
     """
     command = resolve_rustfmt()
     if command is None:
@@ -680,15 +684,18 @@ def format_source(source: str) -> str:
     try:
         result = subprocess.run(
             command + ["--edition", "2021", "--emit", "stdout"],
-            input=source,
-            text=True,
+            input=source.encode("utf-8"),
             capture_output=True,
             check=True,
         )
     except (OSError, subprocess.CalledProcessError) as error:
-        detail = getattr(error, "stderr", "") or str(error)
-        raise SystemExit(f"rustfmt failed: {detail.strip()}")
-    return result.stdout
+        stderr = getattr(error, "stderr", None)
+        if isinstance(stderr, bytes):
+            detail = stderr.decode("utf-8", errors="replace")
+        else:
+            detail = stderr or str(error)
+        raise SystemExit(f"rustfmt failed: {detail.strip() or error}")
+    return result.stdout.decode("utf-8")
 
 
 def main() -> int:
