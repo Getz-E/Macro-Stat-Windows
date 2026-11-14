@@ -30,6 +30,7 @@ import sys
 import tempfile
 import time
 import unittest
+from collections import namedtuple
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -54,6 +55,39 @@ def find_engine():
         if candidate.is_file():
             return candidate
     return None
+
+
+EngineResult = namedtuple("EngineResult", "returncode stdout stderr")
+
+
+def decode_engine_output(data):
+    """Decode engine stdout/stderr as UTF-8, ignoring the runner's locale.
+
+    The engine is a Rust binary: `println!`/`eprintln!` write UTF-8. Using
+    ``text=True`` lets Python decode the pipes with the platform default code
+    page — cp1252 on the Windows runners — which turns Turkish text such as
+    ``zaten çalışıyor`` into mojibake and makes the assertions fail even
+    though the engine printed the expected bytes. Bytes are decoded here
+    explicitly, so the tests do not depend on ``locale.getpreferredencoding``.
+    """
+    if not data:
+        return ""
+    return data.decode("utf-8", errors="replace")
+
+
+def popen_engine(command, env=None):
+    """Start a process whose stdout/stderr stay raw bytes.
+
+    Text wrappers are avoided on purpose (see `decode_engine_output`). Callers
+    must drain the pipes with ``communicate()``; every stream is also closed in
+    ``tearDown`` so no unclosed-pipe ``ResourceWarning`` is emitted.
+    """
+    return subprocess.Popen(
+        command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        env=env,
+    )
 
 
 def profile_document(name="e2e", panic_key="KEY_F24"):
@@ -106,9 +140,15 @@ class EngineE2ETests(unittest.TestCase):
             if process.poll() is None:
                 process.kill()
                 try:
-                    process.wait(timeout=5)
+                    process.communicate(timeout=5)
                 except subprocess.TimeoutExpired:
                     pass
+            # communicate() closes the pipes it drained; closing again is a
+            # no-op. Explicitly closing the rest prevents the
+            # "unclosed file <_io.BufferedReader ...>" ResourceWarning.
+            for stream in (process.stdout, process.stderr):
+                if stream is not None:
+                    stream.close()
         shutil.rmtree(self.root, ignore_errors=True)
 
     # -- yardımcılar -----------------------------------------------------
@@ -119,15 +159,36 @@ class EngineE2ETests(unittest.TestCase):
         return env
 
     def spawn(self, *args):
-        process = subprocess.Popen(
+        process = popen_engine(
             [str(self.engine), *map(str, args)],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
             env=self.engine_env(),
         )
         self.processes.append(process)
         return process
+
+    def run_engine(self, *args, timeout=20):
+        """Run the engine to completion and return UTF-8 decoded output."""
+        completed = subprocess.run(
+            [str(self.engine), *map(str, args)],
+            capture_output=True,
+            timeout=timeout,
+            env=self.engine_env(),
+        )
+        return EngineResult(
+            completed.returncode,
+            decode_engine_output(completed.stdout),
+            decode_engine_output(completed.stderr),
+        )
+
+    def communicate(self, process, timeout=15):
+        """Wait for `process`, close its pipes and return decoded stderr."""
+        try:
+            _, stderr = process.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.communicate()
+            raise
+        return decode_engine_output(stderr)
 
     def start_engine(self):
         return self.spawn(self.profile, "--log", self.log)
@@ -159,13 +220,7 @@ class EngineE2ETests(unittest.TestCase):
         return info
 
     def ipc(self, command):
-        return subprocess.run(
-            [str(self.engine), "--ipc", command],
-            capture_output=True,
-            text=True,
-            timeout=20,
-            env=self.engine_env(),
-        )
+        return self.run_engine("--ipc", command, timeout=20)
 
     def inject_key(self, vk):
         self.user32.keybd_event(vk, 0, 0, 0)
@@ -180,19 +235,13 @@ class EngineE2ETests(unittest.TestCase):
     # -- testler ---------------------------------------------------------
 
     def test_version_and_invalid_profile(self):
-        version = subprocess.run(
-            [str(self.engine), "--version"], capture_output=True, text=True,
-            timeout=20, env=self.engine_env(),
-        )
+        version = self.run_engine("--version")
         self.assertEqual(version.returncode, 0)
         self.assertIn("macrostat-engine", version.stdout)
 
         broken = self.root / "broken.json"
         broken.write_text("{not json", encoding="utf-8")
-        bad = subprocess.run(
-            [str(self.engine), str(broken)], capture_output=True, text=True,
-            timeout=20, env=self.engine_env(),
-        )
+        bad = self.run_engine(broken)
         self.assertEqual(bad.returncode, 2)
 
     def test_ipc_status_ping_reload_stop(self):
@@ -222,19 +271,24 @@ class EngineE2ETests(unittest.TestCase):
 
         stop = self.ipc("stop")
         self.assertEqual(stop.returncode, 0, stop.stderr)
-        self.assertEqual(process.wait(timeout=15), 0)
+        self.communicate(process)
+        self.assertEqual(process.returncode, 0)
         self.assertFalse(self.runtime_path().exists(), "runtime.json silinmedi")
         self.assertIn("Motor durdu", self.read_log())
 
     def test_second_instance_is_rejected(self):
         first = self.stop_engine()
         second = self.spawn(self.profile, "--log", self.root / "second.log")
-        self.assertEqual(second.wait(timeout=15), 7)
-        stderr = second.stderr.read()
+        stderr = self.communicate(second)
+        self.assertEqual(second.returncode, 7)
         self.assertIn("zaten çalışıyor", stderr)
+        # Pipes must be released, otherwise the suite emits ResourceWarning.
+        self.assertTrue(second.stdout.closed)
+        self.assertTrue(second.stderr.closed)
         self.assertIsNone(first.poll(), "ilk motor hâlâ çalışıyor olmalı")
         self.assertEqual(self.ipc("stop").returncode, 0)
-        self.assertEqual(first.wait(timeout=15), 0)
+        self.communicate(first)
+        self.assertEqual(first.returncode, 0)
 
     @unittest.skipIf(
         os.environ.get("MACROSTAT_E2E_SKIP_INPUT") == "1",
@@ -244,7 +298,8 @@ class EngineE2ETests(unittest.TestCase):
         process = self.stop_engine()
         self.wait_for_runtime()
         self.inject_key(VK_F24)
-        self.assertEqual(process.wait(timeout=15), 0)
+        self.communicate(process)
+        self.assertEqual(process.returncode, 0)
         self.assertIn("Acil durdurma tetiklendi", self.read_log())
         self.assertFalse(self.runtime_path().exists())
 
@@ -253,19 +308,15 @@ class EngineE2ETests(unittest.TestCase):
         "girdi enjeksiyonu bu oturumda desteklenmiyor (MACROSTAT_E2E_SKIP_INPUT=1)",
     )
     def test_self_test_mode(self):
-        result = subprocess.run(
-            [str(self.engine), "--self-test"],
-            capture_output=True, text=True, timeout=60, env=self.engine_env(),
-        )
+        result = self.run_engine("--self-test", timeout=60)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("kanca kurulumu", result.stdout)
         self.assertIn("panik tuşu mandalı", result.stdout)
         self.assertNotIn("HATA (", result.stdout)
 
     def test_test_macro_runs_delay_only_macro(self):
-        result = subprocess.run(
-            [str(self.engine), str(self.profile), "--test-macro", "e2e-delay"],
-            capture_output=True, text=True, timeout=30, env=self.engine_env(),
+        result = self.run_engine(
+            self.profile, "--test-macro", "e2e-delay", timeout=30
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("[TEST]", result.stdout)
@@ -283,7 +334,8 @@ class EngineE2ETests(unittest.TestCase):
         self.inject_key(VK_A)
         time.sleep(0.2)
         self.inject_key(VK_F24)
-        self.assertEqual(recorder.wait(timeout=20), 0, recorder.stderr.read())
+        stderr = self.communicate(recorder, timeout=20)
+        self.assertEqual(recorder.returncode, 0, stderr)
 
         recording = json.loads(output.read_text(encoding="utf-8"))
         self.assertEqual(recording["version"], 1)
@@ -295,6 +347,72 @@ class EngineE2ETests(unittest.TestCase):
             "KEY_A basışı kaydedilmedi",
         )
         self.assertNotIn("BTN_", names)
+
+
+class EngineOutputDecodingTests(unittest.TestCase):
+    """Regresyon: motor çıktısı yerel kod sayfasıyla çözümlenmemeli.
+
+    Windows koşucularında ``text=True`` çıktıyı cp1252 ile çözüyordu; motorun
+    UTF-8 baytları mojibake'e dönüşüp `zaten çalışıyor` / `panik tuşu mandalı`
+    karşılaştırmaları yanlışlıkla başarısız oluyordu.
+    """
+
+    TURKISH_STDERR = "[BILGI] Motor zaten çalışıyor (Local\\MacroStat.Engine.abc)\n"
+
+    def test_utf8_output_is_decoded_losslessly(self):
+        raw = self.TURKISH_STDERR.encode("utf-8")
+        self.assertEqual(decode_engine_output(raw), self.TURKISH_STDERR)
+
+    def test_locale_code_page_would_mojibake_turkish(self):
+        raw = "panik tuşu mandalı".encode("utf-8")
+        # Bu, cp1252 ile çözüldüğünde ortaya çıkan bozuk metindir.
+        self.assertEqual(raw.decode("cp1252", errors="replace"), "panik tuÅŸu mandalÄ±")
+        self.assertIn("panik tuşu mandalı", decode_engine_output(raw))
+
+    def test_missing_and_invalid_bytes_are_handled(self):
+        self.assertEqual(decode_engine_output(None), "")
+        self.assertEqual(decode_engine_output(b""), "")
+        self.assertEqual(decode_engine_output(b"ok\xff"), "ok\ufffd")
+
+
+class PipedProcessTests(unittest.TestCase):
+    """Regresyon: alt süreç boruları bayt olarak açılır ve kapatılır."""
+
+    def test_pipes_are_bytes_and_closed_after_communicate(self):
+        process = popen_engine(
+            [sys.executable, "-c", "import sys; sys.stdout.write('ok')"]
+        )
+        try:
+            stdout, stderr = process.communicate(timeout=10)
+        finally:
+            for stream in (process.stdout, process.stderr):
+                if stream is not None:
+                    stream.close()
+        self.assertEqual(process.returncode, 0)
+        self.assertEqual(stdout, b"ok")
+        self.assertEqual(stderr, b"")
+        self.assertTrue(process.stdout.closed)
+        self.assertTrue(process.stderr.closed)
+
+    def test_closing_pipes_emits_no_resource_warning(self):
+        import gc
+        import warnings
+
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            process = popen_engine([sys.executable, "-c", "pass"])
+            process.communicate(timeout=10)
+            for stream in (process.stdout, process.stderr):
+                if stream is not None:
+                    stream.close()
+            del process
+            gc.collect()
+        resource_warnings = [
+            warning
+            for warning in caught
+            if issubclass(warning.category, ResourceWarning)
+        ]
+        self.assertEqual(resource_warnings, [])
 
 
 if __name__ == "__main__":
