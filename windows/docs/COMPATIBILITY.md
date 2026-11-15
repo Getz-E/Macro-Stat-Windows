@@ -21,15 +21,20 @@ Amaç: **işlevsel parite** + Windows'a özgü iyileştirmeler. Profil dosyası 
 | Tek örnek | `flock` | Adlandırılmış mutex | ✅ Parite |
 | Sinyal ile yeniden yükleme | `SIGUSR1` | Kanal `reload` | ✅ Parite |
 | Ebeveyn çökünce temiz çıkış | `PR_SET_PDEATHSIG` | Job Object + PID izleme | ✅ Parite |
-| Profil izleme | `inotify` | `ReadDirectoryChangesW` | ✅ Parite |
+| Profil izleme | `inotify` | — | ❌ Windows'ta uygulanmadı |
 | Günlük | Dosya + rotasyon | Dosya + rotasyon + kullanıcı ACL | ✅ Parite |
-| Otomatik başlatma | `.desktop` | `HKCU\...\Run` (isteğe bağlı) | ➕ Opsiyonel |
-| Sistem tepsisi | — | `QSystemTrayIcon` (isteğe bağlı) | ➕ Opsiyonel |
+| Otomatik başlatma | `.desktop` | — | ❌ Uygulanmadı (planlanan) |
+| Sistem tepsisi | — | — | ❌ Uygulanmadı (planlanan) |
+
+> **Not:** Bu tablo hedef pariteyi değil, **kodda gerçekten bulunan** durumu
+> gösterir. Profil izleme, otomatik başlatma ve sistem tepsisi eski planlama
+> belgelerinde (ör. `REPORT.md`) geçer; Windows kodunda karşılıkları yoktur.
+> Güncel özellik listesi için depo kökündeki `README.md`'ye bakın.
 
 ## 2. Anahtar adları
 
 - Profil içinde **Linux evdev adları** (`KEY_*`, `BTN_*`) korunur; bunlar sözleşmenin parçasıdır.
-- Windows motoru bu adları VK/tarama koduna eşler. Eşleme tablosu Faz 1'de `engine/src/keymap.rs` + `docs/KEY-DICTIONARY.tsv` üzerinden üretilir.
+- Windows motoru bu adları VK/tarama koduna eşler. Eşleme tablosu `engine/src/keymap.rs` + `docs/KEY-DICTIONARY.tsv` üzerinden `tools/gen_keymap.py` ile üretilir.
 - Eşlemesi olmayan tuşlar (ör. bazı medya/tuş takımı tuşları) yüklenirken uyarı verir; makro devre dışı kalır, profil bozulmaz.
 - Sayısal evdev kodları (`123`, `CODE_123`) Windows'ta desteklenmez.
 - Çıplak rakam jetonları (`"0"`–`"9"`) Linux'ta sayısal kod sayıldığı için rakam tuşları `KEY_0`–`KEY_9` yazılmalıdır; Windows çözümleyicisi aynı sırayı izler ve çıplak rakamı reddeder.
@@ -54,7 +59,7 @@ Amaç: **işlevsel parite** + Windows'a özgü iyileştirmeler. Profil dosyası 
 | UAC/kilit ekranında çalışmama | Güvenli masaüstü; güvenlik gereği |
 | Gerçek sanal aygıt yok | VHF çekirdek modu; kapsam dışı |
 | `TEXT` Unicode | Windows iyileştirmesi; Linux profili etkilenmez |
-| Uzun yol desteği (`longPathAware`) | Windows'a özgü manifest |
+| Uzun yol desteği (`longPathAware`) | **Uygulanmadı/doğrulanmadı:** motorda manifest kaynağı yok |
 | Koyu başlık çubuğu | Windows'a özgü kozmetik |
 
 ## 5. Test edilecek uyumluluk noktaları

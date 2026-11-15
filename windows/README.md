@@ -1,10 +1,10 @@
 # MacroStat — Windows sürümü
 
-Bu dizin, MacroStat'ın Windows'a taşınmasına ait **tüm** çalışmayı barındırır. Linux ağacı (`../linux/`) salt okunur referanstır; burada üretilen hiçbir dosya Linux tarafını değiştirmez.
+Bu dizin, MacroStat'ın Windows'a taşınmasına ait **tüm** çalışmayı barındırır. Linux sürümü ayrı bir projedir/ayrı bir depodur; bu depoda `linux/` ağacı bulunmaz. Windows'a ait her dosya, komut çıktısı ve rapor bu dizin altında üretilir.
 
 | | |
 |---|---|
-| **Durum** | Faz 6–8 kaynak düzeyinde tamamlandı — motor **95** birim testi, GUI **47** test, gerçek ikili üzerinde **9** E2E senaryosu; sürüm **aday**. Windows CI ilk koşusu, VM kabulü ve imza `docs/CI-RUNBOOK.md` + `reports/08-final-report.md` kontrol listesinde bekliyor |
+| **Durum** | Faz 6–8 kaynak düzeyinde tamamlandı — motor **99** birim testi, GUI **55** test, Windows'ta **7** E2E test metodu (**9** kabul senaryosu); sürüm **adayı** (Release Candidate). 14 Kasım 2026'daki GitHub Actions koşusu (43638328015) beş işte başarılı, imza işi sertifika olmadığı için atlandı. VM kabulü ve kod imzası hâlâ açıktır (`docs/CI-RUNBOOK.md` + `reports/08-final-report.md`) |
 | **Hedef** | Windows 10 22H2 + Windows 11, x64 |
 | **Motor** | Rust (MSVC hedefi) — `engine/` |
 | **Arayüz** | PyQt6, Python 3.10+ — `gui/` |
@@ -14,9 +14,17 @@ Bu dizin, MacroStat'ın Windows'a taşınmasına ait **tüm** çalışmayı bar�
 
 ## Nereden başlanır
 
+`reports/` altındaki bütün raporlar ve `REPORT.md` **tarihseldir**: yazıldıkları
+tarihteki durumu yansıtır, güncel durumun kaynağı değildir. Güncel ürün bilgisi
+için depo kökündeki `README.md`, güncel mimari için `docs/WINDOWS-ARCHITECTURE.md`
+esastır.
+
 | Belge | İçerik |
 |---|---|
-| [`REPORT.md`](REPORT.md) | İnceleme, fizibilite, mimari, riskler, kararlar (ana rapor) |
+| [`../README.md`](../README.md) | Ürün tanıtımı, kurulum/hızlı başlangıç, kullanım, testler (iki dilli) |
+| [`../SECURITY.md`](../SECURITY.md) / [`../SECURITY.tr.md`](../SECURITY.tr.md) | Güvenlik bildirim politikası (İngilizce / Türkçe) |
+| [`../CONTRIBUTING.md`](../CONTRIBUTING.md) / [`../CONTRIBUTING.tr.md`](../CONTRIBUTING.tr.md) | Katkı rehberi (İngilizce / Türkçe) |
+| [`REPORT.md`](REPORT.md) | **Tarihsel** Faz 0 inceleme, fizibilite ve plan raporu — güncel mimari belgesi değildir |
 | [`reports/00-inceleme-ve-planlama.md`](reports/00-inceleme-ve-planlama.md) | İnceleme adımı raporu |
 | [`reports/arastirma-01-windows-sinirlari-ve-alternatifler.md`](reports/arastirma-01-windows-sinirlari-ve-alternatifler.md) | UIPI / güvenli masaüstü / sanal HID araştırması |
 | [`reports/00-baseline.md`](reports/00-baseline.md) | Faz 0 raporu ve kabul kanıtları |
@@ -33,12 +41,12 @@ Bu dizin, MacroStat'ın Windows'a taşınmasına ait **tüm** çalışmayı bar�
 | [`reports/11-repo-prep.md`](reports/11-repo-prep.md) | Depo hazırlığı: kök dosyalar, etkin workflow, tetikleyiciler, audit politikası, preflight sertleştirmesi |
 | [`reports/12-security-audit.md`](reports/12-security-audit.md) | Kapsamlı güvenlik denetimi: bulgular, düzeltmeler, testler, kalan riskler |
 | [`RELEASE-NOTES-1.0.0.md`](RELEASE-NOTES-1.0.0.md) | 1.0.0 sürüm notları ve bilinen sınırlar |
-| [`docs/CI-RUNBOOK.md`](docs/CI-RUNBOOK.md) | İlk gerçek Windows CI koşusu için adım adım kılavuz |
+| [`docs/CI-RUNBOOK.md`](docs/CI-RUNBOOK.md) | Windows CI koşusu için adım adım kılavuz ve doğrulanmış koşu notu |
 | [`docs/WINDOWS-ARCHITECTURE.md`](docs/WINDOWS-ARCHITECTURE.md) | Süreç modeli, modüller, iş parçacıkları, katman sınırları |
 | [`docs/PROFILE-CONTRACT.md`](docs/PROFILE-CONTRACT.md) | **Donmuş** profil ve anahtar sözleşmesi |
 | [`docs/COMPATIBILITY.md`](docs/COMPATIBILITY.md) | Linux ↔ Windows yetenek/anahtar eşlemesi |
 | [`docs/SECURITY-WINDOWS.md`](docs/SECURITY-WINDOWS.md) | Windows tehdit modeli ve önlemler |
-| [`docs/TEST-MATRIX.md`](docs/TEST-MATRIX.md) | Kabul test matrisi (sonuçlar fazlarda doldurulur) |
+| [`docs/TEST-MATRIX.md`](docs/TEST-MATRIX.md) | Kabul test matrisi: faz sonuçları ve güncel test toplamı |
 | [`docs/CODE-SIGNING.md`](docs/CODE-SIGNING.md) | İmza seçenekleri ve öneri |
 
 ## Yerleşim
@@ -47,14 +55,15 @@ Bu dizin, MacroStat'ın Windows'a taşınmasına ait **tüm** çalışmayı bar�
 windows/
   README.md  REPORT.md  reports/  docs/
   VERSION    LICENSE  THIRD_PARTY.md
-  engine/    Cargo.toml + src/{lib,main,profile,keymap,trigger,actions,hook,inject,mouse,ipc,log,winutil,record,runtime}.rs
+  engine/    Cargo.toml + src/{lib,main,profile,keymap,trigger,actions,hook,inject,mouse,
+                             ipc,log,winutil,record,runtime,selftest}.rs
              assets/default_profile.json   tools/gen_keymap.py
   gui/       main.py + macrostat/{app,common,system,recorder,winplatform,...}.py
              MacroStat.spec  version_info.txt  requirements-win.txt
              assets/{default_profile.json,macrostat.svg,macrostat.ico}
   installer/ MacroStat.iss (Inno Setup 6, kullanıcı kapsamlı)
   scripts/   build.ps1  sign.ps1  verify.ps1
-  tests/     Windows'a özgü Python testleri (Faz 3+)
+  tests/     Windows'a özgü Python testleri (GUI + E2E)
 
 ../ci/windows.yml   GitHub Actions kaynağı; .github/workflows/windows.yml birebir kopyasıdır
 ```
@@ -85,7 +94,9 @@ python gui/main.py
 | `onboarding.py` | Yönetici izni istemeyen 3 adım: kontroller, Windows notları, motor onayı |
 | Diğer | `core/macros/editor/nav/widgets/theme/i18n/transfer/sanitize/settings/logpanel` Linux ile aynı davranış, yol/OS uyarlamalarıyla |
 
-Testler: `QT_QPA_PLATFORM=offscreen python -m unittest discover -s windows/tests -v`
+Testler (depo kökünden): `QT_QPA_PLATFORM=offscreen python -m unittest discover -s windows/tests -v`
+— GUI **55** test; E2E dosyası **12** test metodu (7'si yalnızca Windows'ta koşar, 9 kabul
+senaryosu; 5'i platformdan bağımsız regresyon testi). Windows dışında E2E sınıfı atlanır.
 
 ## Paketleme (Faz 5)
 
@@ -131,8 +142,8 @@ enjekte eder; etkileşimli bir masaüstünde çalıştırırken bunu göz önün
 
 ## Değişmez kurallar
 
-1. `../linux/` **salt okunur**; oradaki hiçbir dosya değiştirilmez.
+1. Linux sürümü **ayrı bir depodur**; bu depoya aktarılmaz ve buradaki bir değişiklik kapsamında değiştirilmez.
 2. Windows'a ait her dosya, komut çıktısı ve rapor `windows/` altında üretilir.
-3. Her faz sonunda Türkçe rapor: `reports/NN-*.md`.
+3. Her faz sonunda Türkçe rapor: `reports/NN-*.md`. Bu raporlar **tarihseldir**; güncel durumun kaynağı değildir.
 4. Çekirdek sürücüsü yok, anti-cheat atlatma yok, ağ yok, `uiAccess` yok (v1).
 5. Yönetici pencereler ve güvenli masaüstü **belgelenmiş sınırlardır**; sessiz başarısızlık yerine arayüzde farkındalık gösterilir.

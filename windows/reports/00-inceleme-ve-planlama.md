@@ -1,5 +1,14 @@
 # Adım Raporu 00 — İnceleme, Fizibilite ve Planlama
 
+> **Tarihsel belge.** Bu belge, hazırlandığı tarihteki durumu ve planları
+> yansıtır; güncel proje durumunun veya güncel mimarinin kesin kaynağı
+> değildir. Uygulanmamış planlar güncel özellik olarak
+> değerlendirilmemelidir. Güncel durum için depo kökündeki `README.md` ve
+> `windows/README.md`; güncel mimari için `windows/docs/WINDOWS-ARCHITECTURE.md`
+> belgelerine bakın. İçerik geriye dönük güncellenmemiştir; metinde geçen
+> `linux/` yolları ayrı Linux projesine aittir ve bu depoda bulunmaz.
+
+
 | | |
 |---|---|
 | **Tarih** | 9 Kasım 2026 |

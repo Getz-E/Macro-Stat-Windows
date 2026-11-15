@@ -1,5 +1,14 @@
 # Faz 11 — GitHub Deposu Hazırlığı (13 Kasım 2026)
 
+> **Tarihsel belge.** Bu belge, hazırlandığı tarihteki durumu ve planları
+> yansıtır; güncel proje durumunun veya güncel mimarinin kesin kaynağı
+> değildir. Uygulanmamış planlar güncel özellik olarak
+> değerlendirilmemelidir. Güncel durum için depo kökündeki `README.md` ve
+> `windows/README.md`; güncel mimari için `windows/docs/WINDOWS-ARCHITECTURE.md`
+> belgelerine bakın. İçerik geriye dönük güncellenmemiştir; metinde geçen
+> `linux/` yolları ayrı Linux projesine aittir ve bu depoda bulunmaz.
+
+
 Bu adım, kaynak ağacını bağımsız bir GitHub deposu olarak yayımlamaya
 hazırlar. Ürün kodunda davranış değişikliği yoktur; değişiklikler depo kök
 dosyaları, CI iş akışı, ön kontrol betiği ve belgelerle sınırlıdır.

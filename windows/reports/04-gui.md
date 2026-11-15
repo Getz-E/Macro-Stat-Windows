@@ -1,5 +1,14 @@
 # Adım Raporu — Faz 4 PyQt6 Arayüzü (Windows)
 
+> **Tarihsel belge.** Bu belge, hazırlandığı tarihteki durumu ve planları
+> yansıtır; güncel proje durumunun veya güncel mimarinin kesin kaynağı
+> değildir. Uygulanmamış planlar güncel özellik olarak
+> değerlendirilmemelidir. Güncel durum için depo kökündeki `README.md` ve
+> `windows/README.md`; güncel mimari için `windows/docs/WINDOWS-ARCHITECTURE.md`
+> belgelerine bakın. İçerik geriye dönük güncellenmemiştir; metinde geçen
+> `linux/` yolları ayrı Linux projesine aittir ve bu depoda bulunmaz.
+
+
 | | |
 |---|---|
 | **Tarih** | 10 Kasım 2026 |

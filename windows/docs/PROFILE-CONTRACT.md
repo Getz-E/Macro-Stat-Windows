@@ -4,7 +4,10 @@ Bu sözleşme **Faz 0'da dondurulmuştur**. Windows motoru ve arayüzü bu biçi
 
 - Makine-okunur şema: [`profile.schema.json`](profile.schema.json)
 - Anahtar sözlüğü: [`KEY-DICTIONARY.tsv`](KEY-DICTIONARY.tsv) (Linux motorunun `string_to_key` çözümleyicisinden üretilmiştir)
-- Kaynak: `linux/src/main.rs`, `linux/macrostat/core.py`, `linux/macrostat/transfer.py`, `linux/default_profile.json`
+- Kaynak: Bu sözleşme, MacroStat Linux projesinin motor çözümleyicisi, profil
+  modeli, içe/dışa aktarma kodu ve varsayılan profili temel alınarak
+  dondurulmuştur. Linux projesi ayrı bir depodur ve bu depoda bulunmaz; dosya
+  yolları burada tekrarlanmaz.
 
 ## 1. Dosya yerleşimi
 

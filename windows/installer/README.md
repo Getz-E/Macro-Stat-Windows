@@ -8,6 +8,10 @@ Inno Setup 6 ile **kullanıcı bazlı** kurulum (`MacroStat.iss`, UTF-8 BOM'lu).
 - Kurulanlar: `MacroStat.exe`, `_internal/macrostat-engine.exe`, `_internal/` (Qt, Python, `assets/`), `LICENSE`, `THIRD_PARTY.md`, `VERSION`, kısayollar.
 - Lisans sayfası GPL-3.0-or-later (`LicenseFile=..\LICENSE`).
 - Diller: English + Türkçe; masaüstü simgesi görevi **varsayılan kapalı**.
+- **Bilinen yerelleştirme eksiği:** Kaldırma sırasındaki özel veri silme onayı
+  (`MacroStat.iss` içindeki `MsgBox`) metni sabit İngilizcedir; Türkçe sihirbazda
+  da İngilizce görünür. Bu aşamada kurulum kodu değiştirilmemiştir; düzeltme
+  ileride `[CustomMessages]` ile yapılmalıdır.
 - `ArchitecturesAllowed=x64compatible`, `MinVersion=10.0.19045` (Win10 22H2+).
 - Kaldırma yalnızca kendi kurduğu dosyaları siler; `%LOCALAPPDATA%\MacroStat` ve `%APPDATA%\MacroStat` için **varsayılan "Hayır"** olan bir onay sorar (`MB_DEFBUTTON2`).
 - İmza opsiyonel (`../scripts/sign.ps1`, `../docs/CODE-SIGNING.md`); imzasız sürümde SmartScreen notu.

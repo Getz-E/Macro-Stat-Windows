@@ -1,8 +1,14 @@
 # Windows CI Koşu Kılavuzu (İlk Gerçek Koşu)
 
-Bu belge, `ci/windows.yml` iş akışının ilk gerçek Windows koşusunu adım adım
-açıklar. İş akışı **çevrimdışı** hazırlandı; bu kılavuz uygulandığında koşucu
-yalnızca bağımlılık kurulumu ve artefakt yüklemesi için ağ kullanır.
+Bu belge, `ci/windows.yml` iş akışının Windows koşusunu adım adım açıklar. İş
+akışı **çevrimdışı** hazırlandı; bu kılavuz uygulandığında koşucu yalnızca
+bağımlılık kurulumu ve artefakt yüklemesi için ağ kullanır.
+
+> **Doğrulanmış koşu (14 Kasım 2026, koşu 43638328015):** `Dependency audit`,
+> `Engine core (fmt / clippy / test)`, `GUI unit tests`, `Build installer +
+> portable ZIP` ve `E2E acceptance (real engine)` başarılı; `Sign artifacts
+> (optional)` sertifika tanımlı olmadığı için atlandı. Kılavuz yeni ortamlar ve
+> gelecekteki koşular için geçerlidir; VM kabulü (P-01) hâlâ yapılmamıştır.
 
 ## 0. Ön koşullar
 
@@ -31,12 +37,19 @@ Tetikleyiciler `windows/**`, `ci/**` ve `.github/workflows/**` yollarını,
 
 İsteğe bağlı: `workflow_dispatch` ile elle de başlatılabilir.
 
+`core` işi, `dtolnay/rust-toolchain` bileşenlerine ek olarak açıkça
+`rustup component add rustfmt` adımını çalıştırır. `tools/gen_keymap.py`
+biçimlendirme için `rustfmt`'i PATH üzerinde arar (gerekirse
+`rustup which rustfmt` ile bulur); bulamazsa hata verir ve `--check` bayat
+`keymap.rs` dosyasında başarısız olur. Bu adım, Windows koşucusunda üretimin
+deterministik olmasını sağlar; `--check` davranışı gevşetilmez.
+
 ## 2. Beklenen işler ve çıktılar
 
 | İş | Süre (yaklaşık) | Başarı ölçütü |
 |---|---|---|
-| `core` | 6–10 dk | `gen_keymap.py --check`, `cargo fmt --check`, `clippy -D warnings`, 95 test |
-| `gui-tests` | 2–4 dk | `preflight.py` geçer (SHA sabitleme **zorunlu**); `test_gui*.py` 47 test |
+| `core` | 6–10 dk | `rustup component add rustfmt`, `gen_keymap.py --check`, `cargo fmt --check`, `clippy -D warnings`, 99 test |
+| `gui-tests` | 2–4 dk | `preflight.py` geçer (SHA sabitleme **zorunlu**); `test_gui*.py` 55 test |
 | `build` | 10–15 dk | `MacroStat-Setup-1.0.0.exe`, `MacroStat-1.0.0-portable.zip`, `SHA256SUMS.txt`, `MacroStat/**` |
 | `e2e` | 4–7 dk | 9 senaryo (girdi oturumu yoksa 6) |
 | `audit` | 2–5 dk | `cargo audit --deny warnings` + `pip-audit --strict`; PR'da bilgilendirici, push/etiket/schedule'da **engelleyici** |
@@ -81,7 +94,7 @@ imzasız yapı **başarısız** olur; bu yalnızca imzalı sürümde kullanılı
 
 ## 5. Koşu sonrası
 
-- [ ] Beş işin durumu kaydedildi (ekran görüntüsü/log).
+- [x] Beş işin durumu kaydedildi (14 Kasım 2026, koşu 43638328015: beşi başarılı, imza atlandı).
 - [ ] `e2e` atlanan senaryo varsa nedeni `reports/08-final-report.md`'ye yazıldı.
 - [ ] `SHA256SUMS.txt` değerleri sürüm notlarına eklendi.
 - [ ] VM kurulum testi (P-01) ayrıca yapıldı.

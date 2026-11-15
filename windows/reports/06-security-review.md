@@ -1,5 +1,14 @@
 # Faz 6 — Güvenlik İncelemesi ve Tehdit Modeli (11 Kasım 2026)
 
+> **Tarihsel belge.** Bu belge, hazırlandığı tarihteki durumu ve planları
+> yansıtır; güncel proje durumunun veya güncel mimarinin kesin kaynağı
+> değildir. Uygulanmamış planlar güncel özellik olarak
+> değerlendirilmemelidir. Güncel durum için depo kökündeki `README.md` ve
+> `windows/README.md`; güncel mimari için `windows/docs/WINDOWS-ARCHITECTURE.md`
+> belgelerine bakın. İçerik geriye dönük güncellenmemiştir; metinde geçen
+> `linux/` yolları ayrı Linux projesine aittir ve bu depoda bulunmaz.
+
+
 Bu rapor Faz 6 kapsamında `windows/` altındaki motor, GUI, IPC, kayıt, günlük,
 paketleme ve CI zincirinin güvenlik incelemesini ve bulgulara uygulanan
 düzeltmeleri kaydeder. Ana kurala uyulmuştur: `linux/` altına **hiçbir

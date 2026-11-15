@@ -2,6 +2,10 @@
 
 Bu belge Faz 0'da **dondurulan** mimariyi tanımlar. Uygulama ayrıntıları fazlarda eklenir; buradaki süreç, katman ve sözleşme sınırları değişmez.
 
+> Bu belge uygulama sonrasında, kodla doğrulanan değerlerle (ör. enjeksiyon
+> imzası) güncellenmiştir ve **güncel mimari belgesidir**. Tarihsel planlama
+> için `../REPORT.md` ve `../reports/` belgelerine bakın.
+
 ## 1. Süreç modeli
 
 ```
@@ -57,11 +61,11 @@ Kanca durumu (kuruldu/kaldırıldı/zaman aşımı) GUI'ye `status` yanıtıyla 
  LL hook ──► kuyruk ──► tetikleyici derleyici/eşleştirici ──► eylem
       │                                                        │
       │  kendi enjeksiyonunu ayıkla                            ▼
-      │  (dwExtraInfo == 0x4D535441)                     SendInput
+      │  (dwExtraInfo == 0x4154_534D)                    SendInput
       └──────────────────────────────────────────────► işletim sistemine
 ```
 
-- Enjeksiyon imzası: `dwExtraInfo = 0x4D535441` ("MSTA"). Kanca bu imzayı taşıyan olayı **yok sayar**.
+- Enjeksiyon imzası: `dwExtraInfo = 0x4154_534D` ("MSTA", küçük-endian baytları `4D 53 54 41`). Kanca bu imzayı taşıyan olayı **yok sayar**. Kaynak: `engine/src/winutil.rs` (`INJECTION_SIGNATURE`).
 - `LLKHF_INJECTED` / `LLMHF_INJECTED` loglanır; başka araçların enjeksiyonu isteğe bağlı filtrelenir.
 - Auto-repeat: kendi "basılı tuşlar" kümesi; kümede olan tuşun yeni `KEYDOWN`'ı tekrar sayılır.
 - UIPI farkındalığı: enjeksiyon öncesi ön plandaki pencerenin bütünlük düzeyi sezilir; engel `GetLastError` ile **algılanamaz**.
@@ -93,7 +97,12 @@ Kanca durumu (kuruldu/kaldırıldı/zaman aşımı) GUI'ye `status` yanıtıyla 
 | `MacroStat-1.0.0-portable.zip` | `scripts/build.ps1` (`Compress-Archive`) |
 | `SHA256SUMS.txt` | `scripts/build.ps1`; imza sonrası CI yeniden üretir |
 
-Manifest (motor): `asInvoker`, `PerMonitorV2`, `longPathAware`, `supportedOS` Win10/11. İmza Faz 5+'ta `signtool` ile eklenebilir; ilk sürüm imzasız.
+Manifest: motorda **ayrı bir `.manifest` kaynağı veya `build.rs` yoktur.** DPI
+farkındalığı `PerMonitorV2` çalışma zamanında `SetProcessDpiAwarenessContext` ile
+ayarlanır; `longPathAware` ve `supportedOS` bildirimleri bu depoda tanımlı
+değildir ve doğrulanmamıştır. GUI tarafında `asInvoker` davranışı PyInstaller'ın
+ürettiği varsayılan manifeste dayanır; açık bir manifest dosyasıyla kanıtlanmış
+değildir. İmza Faz 5+'ta `signtool` ile eklenebilir; ilk sürüm imzasız.
 
 ## 7. Faz sınırları
 

@@ -2,6 +2,12 @@
 
 Sonuçlar fazlar ilerledikçe doldurulur. `Durum`: ☐ bekliyor, ✅ geçti, ❌ kaldı, ⚠️ belgelenmiş sınır.
 
+> **Güncel test toplamı (14 Kasım 2026):** Rust **99**, GUI **55**; E2E dosyasında
+> **12** test metodu (7'si yalnızca Windows'ta koşar ve 9 kabul senaryosunu
+> kapsar, 5'i platformdan bağımsız regresyon testidir). Aşağıdaki faz
+> bölümlerindeki sayılar **o tarihteki** sonuçlardır ve geriye dönük
+> değiştirilmemiştir.
+
 ## 1. Ortamlar
 
 | Kod | Ortam |
@@ -133,7 +139,7 @@ Sonuçlar fazlar ilerledikçe doldurulur. `Durum`: ☐ bekliyor, ✅ geçti, ❌
 
 | ID | Durum | Kanıt |
 |---|---|---|
-| G-01 | ✅ kod / ⏳ VM | 4 sayfa başsız (offscreen) kuruldu; 45 birim testi; çeviri kapsam testi (sabit `T()` metinlerinin %100'ü `_EN`'de) |
+| G-01 | ✅ kod / ⏳ VM | 4 sayfa başsız (offscreen) kuruldu; Faz 4 tarihinde 45 birim testi (güncel: 55); çeviri kapsam testi (sabit `T()` metinlerinin %100'ü `_EN`'de) |
 | G-02 | ✅ kod / ⏳ VM | `transfer` modülü Linux ile aynı; profil sözleşmesi `schemaVersion 1`; `default_profile.json` bayt kopyası |
 | G-03 | ✅ kod / ⏳ VM | Sihirbaz yönetici istemez; 5 kontrol (motor, veri klasörü, profil, Job Object, yetki) ve Windows notları sayfası; başsız kuruldu |
 | G-04 | ✅ kod | Tek örnek: `QLockFile` (`%LOCALAPPDATA%\MacroStat\macrostat-gui.lock`); ikinci `tryLock` başarısız |
@@ -152,7 +158,7 @@ Sonuçlar fazlar ilerledikçe doldurulur. `Durum`: ☐ bekliyor, ✅ geçti, ❌
 | P-04 | ✅ kod | Sürüm tek kaynak: `windows/VERSION` = `engine/Cargo.toml` = `version_info.txt`; `build.ps1` uyumsuzlukta durur. |
 | P-05 | ✅ kod | `SHA256SUMS.txt` üretimi ve `verify.ps1` doğrulaması aynı biçimi (küçük harf `hash  ad`) kullanır. |
 | P-06 | ✅ kod | CI: `core`, `gui-tests`, `build`, `sign` işleri; imza yalnızca `SIGNING_ENABLED` + korumalı ortamla. YAML ayrıştırma doğrulandı. |
-| P-07 | ✅ yerel / ⏳ CI | GUI `py_compile` + 45/45 test yerelde geçti; gerçek cargo/PyInstaller/ISCC Faz 6'da `windows-latest` üzerinde. |
+| P-07 | ✅ yerel / ⏳ CI | GUI `py_compile` + Faz 5 tarihinde 45/45 test yerelde geçti (güncel: 55); gerçek cargo/PyInstaller/ISCC Faz 6'da `windows-latest` üzerinde. |
 
 ### 6.3 Faz 6 — güvenlik kod düzeyi sonuçları (11 Kasım 2026)
 
@@ -164,7 +170,8 @@ Sonuçlar fazlar ilerledikçe doldurulur. `Durum`: ☐ bekliyor, ✅ geçti, ❌
 | S-04 | ✅ kod | Profil sınırları: `sanitize_limits` + iki regresyon testi (kırpma, tekerlek büyüklüğünün korunması). |
 | S-05 | ✅ kod / ⏳ VM | Reparse point reddi: ayarlar, profil, `runtime.json` ve kayıt yazımı. Linux'ta sembolik bağ testi geçti. |
 
-Faz 6 test toplamı: Rust **93/93**, Python **47/47**.
+Faz 6 tarihindeki test toplamı: Rust **93/93**, Python **47/47** (güncel toplam
+için sayfa başındaki nota bakın).
 
 ### 6.4 Faz 7 — uçtan uca (E2E) kabul senaryoları
 
@@ -184,9 +191,10 @@ CI işi: `e2e` (`ci/windows.yml`), `build` artefaktını indirir ve gerçek
 | U-08 | `--record-input` turu | Geçerli JSON; `KEY_A` basışı kaydedilmiş |
 | U-09 | `--self-test` | Kanca, imza yalıtımı, dış olay, panik mandalı, takılı tuş; çıkış 0 |
 
-Not: U-05 ve U-08 gerçek girdi enjeksiyonu gerektirir. Etkileşimli olmayan
-bir CI oturumunda kanca olay alamazsa `MACROSTAT_E2E_SKIP_INPUT=1` ile yalnızca
-yaşam döngüsü senaryoları koşulur; bu durum raporda açıkça belirtilir.
+Not: U-05, U-08 ve U-09 gerçek girdi enjeksiyonu gerektirir. Etkileşimli olmayan
+bir CI oturumunda kanca olay alamazsa `MACROSTAT_E2E_SKIP_INPUT=1` ile bu üç
+senaryo atlanır ve yalnızca yaşam döngüsü senaryoları koşulur; atlama test
+çıktısında `skipped` olarak görünür ve "geçti" sayılmaz.
 
 ### 6.5 Faz 8 — sürüm kontrolü
 
@@ -194,7 +202,7 @@ yaşam döngüsü senaryoları koşulur; bu durum raporda açıkça belirtilir.
 |---|---|
 | Sürüm tek kaynak (`VERSION` = `Cargo.toml` = `version_info.txt` = `.iss`) | ✅ `ci/preflight.py` |
 | CI iş akışı bütünlüğü (dosyalar, işler, imza koşulu) | ✅ `ci/preflight.py` |
-| Yerel test toplamı | ✅ Rust 93 + Python 47 |
+| Yerel test toplamı | ✅ Rust 99 + GUI 55 (14 Kasım 2026) |
 | Windows üretimi ve VM kabulü | ⏳ `reports/08-final-report.md` §4 |
 
 ## 7. Faz 0'da doğrulanacak bilinmeyenler (Faz 2'ye taşındı)

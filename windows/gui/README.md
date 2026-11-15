@@ -1,6 +1,8 @@
 # GUI (PyQt6) — Faz 4 (tamamlandı)
 
-Bu dizin, `../linux/macrostat/` paketinin Windows taşımasıdır. Giriş noktası `main.py`; paket `macrostat/`.
+Bu dizin, MacroStat Linux sürümünün PyQt6 paketinin Windows taşımasıdır. Linux
+projesi ayrı bir depodur ve bu depoda yer almaz. Giriş noktası `main.py`; paket
+`macrostat/`.
 
 ```
 pip install -r requirements-win.txt
@@ -35,7 +37,8 @@ Tek örnek kilidi `%LOCALAPPDATA%\MacroStat\macrostat-gui.lock` (`QLockFile`); a
 
 - Tüm sayfalar çalışır; TR/EN; profil içe/dışa; onboarding yönetici izni istemez. ✅ (kod düzeyi)
 - Profil biçimi `../docs/PROFILE-CONTRACT.md` ile aynıdır. ✅
-- Testler: `QT_QPA_PLATFORM=offscreen python -m unittest discover -s ../tests -v` (45 test)
+- Testler: `QT_QPA_PLATFORM=offscreen python -m unittest discover -s ../tests -v`
+  — GUI **55** test; E2E dosyası Windows dışında atlanır (bkz. `../tests/README.md`).
 - Rapor: `../reports/04-gui.md`
 
 ## Paketleme (Faz 5)

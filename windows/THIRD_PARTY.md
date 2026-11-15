@@ -12,10 +12,13 @@ MacroStat'ın kendi kaynak kodu **GPL-3.0-or-later** ile lisanslanmıştır
 | `rand` | 0.8.x | MIT OR Apache-2.0 |
 | `windows-sys` | 0.61.x | MIT OR Apache-2.0 |
 
-`Cargo.lock` içindeki geçişli paketler **MIT**, **Apache-2.0**,
-**BSD-2-Clause**, **Unlicense**, **Unicode-3.0** veya
-**Apache-2.0 WITH LLVM-exception** lisans ailelerinden birini kullanır.
-Tam liste `windows/engine/Cargo.lock` içinde sabitlenmiştir.
+Doğrudan bağımlılıkların lisansları yukarıdaki gibidir. `Cargo.lock` içinde
+sabitlenen **geçişli** paketlerin lisansları bu depoda makine tarafından
+doğrulanmamıştır; `Cargo.lock` lisans alanı taşımaz. Yaygın olarak MIT,
+Apache-2.0, BSD-2-Clause, Unlicense, Unicode-3.0 veya Apache-2.0 WITH
+LLVM-exception aileleri beklenir, ancak bu bir **kesin iddia değildir**.
+Doğrulama için `cargo metadata`/`cargo license` veya `cargo deny` (ağ erişimi
+gerektirir) çalıştırılmalıdır.
 
 ## Arayüz ve paketleme
 

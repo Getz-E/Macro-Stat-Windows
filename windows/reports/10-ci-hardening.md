@@ -1,5 +1,14 @@
 # Faz 10 — CI ve Tedarik Zinciri Sertleştirmesi (12 Kasım 2026)
 
+> **Tarihsel belge.** Bu belge, hazırlandığı tarihteki durumu ve planları
+> yansıtır; güncel proje durumunun veya güncel mimarinin kesin kaynağı
+> değildir. Uygulanmamış planlar güncel özellik olarak
+> değerlendirilmemelidir. Güncel durum için depo kökündeki `README.md` ve
+> `windows/README.md`; güncel mimari için `windows/docs/WINDOWS-ARCHITECTURE.md`
+> belgelerine bakın. İçerik geriye dönük güncellenmemiştir; metinde geçen
+> `linux/` yolları ayrı Linux projesine aittir ve bu depoda bulunmaz.
+
+
 `reports/09-gap-analysis.md` içindeki G-06, G-07 ve G-08 maddelerinin
 kapatılması için yapılan çalışma. Kaynak kodda davranış değişikliği yok;
 değişiklikler CI iş akışı, ön kontrol betiği ve bağımlılık tanımlarıyla

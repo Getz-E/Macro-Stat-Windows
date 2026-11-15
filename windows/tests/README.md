@@ -1,16 +1,34 @@
-# Windows'a özgü Python testleri — Faz 4–5
+# Windows'a özgü Python testleri
 
-`test_gui_windows.py` tek dosyada **45 test**; Linux'taki sistem testlerinin Windows karşılıkları:
+İki test dosyası vardır:
 
-- Yol/ACL/PID/sinyal yerine kanal, mutex, Job Object, `%LOCALAPPDATA%` yolları.
-- `sanitize`, `transfer`, `i18n` bütünlüğü (sabit `T()` metinlerinin tamamı `_EN`'de ve `{}` sayıları eşit), `settings` atomikliği.
-- `runtime.json` tanımı, `--ipc` istemcisi (mock motora karşı), motor çalışıyor algısı, özel dosya okuma/yazma, giriş birleştirme, yol/anahtar yardımcıları, onboarding kontrolleri.
-- Paket sözleşmesi: PyInstaller düzeni (`_internal/`), donmuş uygulama dizini, sürüm tutarlılığı (`VERSION` = `Cargo.toml` = `version_info.txt`), kurulumun kullanıcı kapsamlı olduğu.
+| Dosya | İçerik | Nerede koşar |
+|---|---|---|
+| `test_gui_windows.py` | **55** test. Linux'taki sistem testlerinin Windows karşılıkları: kanal, mutex, Job Object, `%LOCALAPPDATA%` yolları; `sanitize`, `transfer`, `i18n`, `settings`; `runtime.json`, `--ipc` istemcisi, motor algılama, dosya okuma/yazma, giriş birleştirme, onboarding; PyInstaller/kurulum paket sözleşmesi | Her platformda |
+| `test_e2e_windows.py` | **12** test metodu: 7'si gerçek `macrostat-engine.exe` üzerinde **9** kabul senaryosu (U-01…U-09), 5'i platformdan bağımsız regresyon testi (UTF-8 çıktı çözümlemesi, alt süreç borusu kapatma) | 7 E2E metodu yalnızca Windows'ta; regresyon testleri her platformda |
 
-Koşum (depo kökünden):
+GUI testleri:
+
+```
+QT_QPA_PLATFORM=offscreen python -m unittest discover -s windows/tests -p "test_gui*.py" -v
+```
+
+E2E testleri (Windows; gerçek ikili gerekir):
+
+```powershell
+$env:MACROSTAT_E2E_ENGINE = "C:\...\macrostat-engine.exe"
+python -m unittest discover -s windows/tests -p "test_e2e*.py" -v
+```
+
+Tam takım (depo kökünden):
 
 ```
 QT_QPA_PLATFORM=offscreen python -m unittest discover -s windows/tests -v
 ```
 
-Testler `APPDATA`/`LOCALAPPDATA` değişkenlerini geçici dizine yönlendirir; gerçek kullanıcı verisine dokunmaz. Motor gerektiren testler `unittest.mock` ile sahte süreç kullanır.
+Windows dışında E2E sınıfı `skipped` olarak raporlanır; atlama "geçti" sayılmaz.
+Girdi enjeksiyonu yapılamayan oturumlarda `MACROSTAT_E2E_SKIP_INPUT=1` kullanılır.
+
+Testler `APPDATA`/`LOCALAPPDATA` değişkenlerini geçici dizine yönlendirir; gerçek
+kullanıcı verisine dokunmaz. Motor gerektiren GUI testleri `unittest.mock` ile
+sahte süreç kullanır.

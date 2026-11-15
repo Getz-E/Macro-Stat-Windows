@@ -57,9 +57,11 @@ Get-FileHash .\MacroStat-Setup-1.0.0.exe -Algorithm SHA256
 
 ## Doğrulama
 
-- Rust: `cargo fmt --check`, `cargo clippy -D warnings`, **95** test.
-- Python: **47** birim testi + **9** Windows E2E senaryosu.
-- Ayrıntı: `windows/reports/07-e2e.md`, `windows/reports/08-final-report.md`.
+- Rust: `cargo fmt --check`, `cargo clippy -D warnings`, **99** test.
+- Python: **55** GUI birim testi; Windows E2E dosyasında **7** test metodu
+  (**9** kabul senaryosu) + **5** platformdan bağımsız regresyon testi.
+- Ayrıntı: `windows/reports/07-e2e.md`, `windows/reports/08-final-report.md`
+  (tarihsel raporlar).
 
 ## Lisans
 

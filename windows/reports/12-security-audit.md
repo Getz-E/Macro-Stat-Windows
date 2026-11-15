@@ -1,5 +1,14 @@
 # Faz 12 — Kapsamlı Güvenlik Denetimi ve Sertleştirme
 
+> **Tarihsel belge.** Bu belge, hazırlandığı tarihteki durumu ve planları
+> yansıtır; güncel proje durumunun veya güncel mimarinin kesin kaynağı
+> değildir. Uygulanmamış planlar güncel özellik olarak
+> değerlendirilmemelidir. Güncel durum için depo kökündeki `README.md` ve
+> `windows/README.md`; güncel mimari için `windows/docs/WINDOWS-ARCHITECTURE.md`
+> belgelerine bakın. İçerik geriye dönük güncellenmemiştir; metinde geçen
+> `linux/` yolları ayrı Linux projesine aittir ve bu depoda bulunmaz.
+
+
 Tarih: 13 Kasım 2026. Bu adımda motor (Rust), GUI (Python/PyQt6), kurulum
 betikleri, CI/tedarik zinciri ve depo hijyeni güvenlik açısından incelendi;
 doğrulanan düşük/orta riskli bulgular düzeltildi ve regresyon testleri
