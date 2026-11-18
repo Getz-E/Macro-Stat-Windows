@@ -432,6 +432,36 @@ mod tests {
     }
 
     #[test]
+    fn space_is_not_the_panic_key() {
+        use crate::keymap::keys_are_equivalent;
+        // Space must reach `on_key`; only the configured panic key ends the
+        // recording. Left/right modifier equivalence is unchanged.
+        assert!(!keys_are_equivalent(Key::KEY_SPACE, Key::KEY_PAUSE));
+        assert!(!keys_are_equivalent(Key::KEY_SPACE, Key::KEY_ESC));
+        assert!(keys_are_equivalent(Key::KEY_RIGHTCTRL, Key::KEY_LEFTCTRL));
+    }
+
+    #[test]
+    fn repeated_space_presses_are_recorded() {
+        let t0 = Instant::now();
+        let mut recorder = MousePathRecorder::new(None, t0);
+        recorder.on_key(Key::KEY_SPACE, true, t0 + Duration::from_millis(5));
+        recorder.on_key(Key::KEY_SPACE, false, t0 + Duration::from_millis(60));
+        recorder.on_key(Key::KEY_SPACE, true, t0 + Duration::from_millis(80));
+        recorder.on_key(Key::KEY_SPACE, false, t0 + Duration::from_millis(120));
+        let recording = recorder.finish(t0 + Duration::from_millis(121));
+        assert_eq!(
+            recording.keys,
+            vec![
+                (5, "KEY_SPACE".to_string(), 1),
+                (60, "KEY_SPACE".to_string(), 0),
+                (80, "KEY_SPACE".to_string(), 1),
+                (120, "KEY_SPACE".to_string(), 0),
+            ]
+        );
+    }
+
+    #[test]
     fn empty_keys_are_omitted_from_the_document() {
         let t0 = Instant::now();
         let mut recorder = MousePathRecorder::new(Some([1, 2]), t0);

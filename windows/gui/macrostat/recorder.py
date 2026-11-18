@@ -271,6 +271,13 @@ class RecorderMixin:
         self.btn_start_rec.setText(T("Kaydı Durdur"))
         theme.set_variant(self.btn_start_rec, "danger")
         self.chk_mouse_path.setEnabled(False)
+        # Kayıt sırasında Space sıradan bir giriş tuşudur. Odak "Kaydı Durdur"
+        # düğmesinde kalırsa Qt Space'i düğme etkinleştirmesi sayıp kaydı
+        # durdurur; bu yüzden odak kayıt tablosuna taşınır ve düğme klavye
+        # odağı almaz (fareyle durdurma ve Pause tuşu aynen çalışır).
+        self.btn_start_rec.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.btn_start_rec.clearFocus()
+        self.rec_table.setFocus(Qt.FocusReason.OtherFocusReason)
         self.show_autosave_banner(T(
             "Sistem geneli kayıt başladı: bitirmek için Pause tuşuna basın "
             "veya düğmeyi kullanın."))
@@ -358,6 +365,7 @@ class RecorderMixin:
 
     def _finish_recording_ui(self):
         self.btn_start_rec.setEnabled(True)
+        self.btn_start_rec.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.btn_start_rec.setText(T("Kaydı Başlat"))
         theme.set_variant(self.btn_start_rec, "primary")
         self.chk_mouse_path.setEnabled(True)
@@ -436,49 +444,53 @@ class RecorderMixin:
         self._input_record_proc = None
         self._input_record_timer.stop()
         self.recording_active = False
-        stderr = bytes(proc.readAllStandardError()).decode(
-            "utf-8", "replace").strip()
-        if exit_code != 0 and stderr:
-            QMessageBox.warning(
-                self, T("Kayıt hatası: {}").format(stderr.splitlines()[-1]))
-
-        points = []
-        buttons = []
-        keys = []
-        start = None
-        path = self._input_record_file
-        if path and Path(path).exists():
-            try:
-                data = load_record_document(path)
-                points = self._sanitize_mouse_path(data)
-                buttons = sanitize_mouse_buttons(data)
-                keys = sanitize_key_events(data)
-                start = self._sanitize_mouse_start(data)
-            except (OSError, ValueError, json.JSONDecodeError) as exc:
+        try:
+            stderr = bytes(proc.readAllStandardError()).decode(
+                "utf-8", "replace").strip()
+            if exit_code != 0 and stderr:
                 QMessageBox.warning(
-                    self, T("Kayıt okunamadı: {}").format(exc))
-        self._cleanup_record_file()
+                    self, T("Kayıt hatası: {}").format(stderr.splitlines()[-1]))
 
-        if not self.chk_mouse_path.isChecked():
             points = []
-        if points or buttons or keys:
-            events = merge_input_events(points, buttons, keys)
-            if start is not None and points:
-                for event in events:
-                    if event["type"] == "MOUSE_PATH":
-                        event["start"] = start
-                        break
-            self.recorded_events.extend(events)
-            self.refresh_rec_table()
-            total_ms = sum(p[0] for p in points)
-            self.show_autosave_banner(T(
-                "{} tuş, {} fare olayı, {} nokta kaydedildi ({} ms).").format(
-                    len(keys), len(buttons), len(points), total_ms))
-        elif exit_code == 0:
-            self.show_autosave_banner(T("Kayıt boş; olay algılanmadı."))
+            buttons = []
+            keys = []
+            start = None
+            path = self._input_record_file
+            if path and Path(path).exists():
+                try:
+                    data = load_record_document(path)
+                    points = self._sanitize_mouse_path(data)
+                    buttons = sanitize_mouse_buttons(data)
+                    keys = sanitize_key_events(data)
+                    start = self._sanitize_mouse_start(data)
+                except (OSError, ValueError, json.JSONDecodeError) as exc:
+                    QMessageBox.warning(
+                        self, T("Kayıt okunamadı: {}").format(exc))
+            self._cleanup_record_file()
 
-        proc.deleteLater()
-        self._finish_recording_ui()
+            if not self.chk_mouse_path.isChecked():
+                points = []
+            if points or buttons or keys:
+                events = merge_input_events(points, buttons, keys)
+                if start is not None and points:
+                    for event in events:
+                        if event["type"] == "MOUSE_PATH":
+                            event["start"] = start
+                            break
+                self.recorded_events.extend(events)
+                self.refresh_rec_table()
+                total_ms = sum(p[0] for p in points)
+                self.show_autosave_banner(T(
+                    "{} tuş, {} fare olayı, {} nokta kaydedildi ({} ms).").format(
+                        len(keys), len(buttons), len(points), total_ms))
+            elif exit_code == 0:
+                self.show_autosave_banner(T("Kayıt boş; olay algılanmadı."))
+        finally:
+            # Ayrıştırma, birleştirme, tablo yenileme veya banner beklenmedik
+            # bir istisna atsa bile düğme/odak durumu kilitli kalmasın;
+            # istisna yutulmaz, çağırana yayılmaya devam eder.
+            proc.deleteLater()
+            self._finish_recording_ui()
 
     def map_qt_key_to_evdev(self, qt_key, text):
         return KeyCaptureDialog.map_qt_key_to_evdev(self, qt_key, text)

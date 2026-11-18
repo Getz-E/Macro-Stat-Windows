@@ -11,6 +11,9 @@ import os
 import sys
 from pathlib import Path
 
+from PyQt6.QtWidgets import (
+    QAbstractSpinBox, QApplication, QLineEdit, QPlainTextEdit, QTextEdit)
+
 from . import common, theme, winplatform
 from .common import *  # noqa: F401,F403
 from .core import CoreMixin
@@ -23,6 +26,35 @@ from .system import SystemMixin
 class MacroStatApp(CoreMixin, MacrosMixin, EditorMixin, RecorderMixin,
                    SystemMixin, QMainWindow):
     """Sekmeli MacroStat arayüzü; davranış mixin modüllerinde ayrıştırılmıştır."""
+
+    @staticmethod
+    def _focus_is_text_entry():
+        """Odak bir metin alanındaysa Delete normal metin düzenlemesidir."""
+        focused = QApplication.focusWidget()
+        return isinstance(
+            focused, (QLineEdit, QTextEdit, QPlainTextEdit, QAbstractSpinBox))
+
+    def keyPressEvent(self, event):
+        # Delete yalnızca tablo odaklıyken değil, makro sekmesi açıkken ve
+        # gerçek bir satır seçiliyken çalışır. Motorun AÇIK/KAPALI olması
+        # (ör. STOP sonrası odak başka bir düğmede kalsa bile) bu GUI
+        # işlemini etkilemez; metin alanlarında Delete düzenleme olarak kalır.
+        # `currentRow()` tek başına yetmez: `clearSelection()` sonrası Qt
+        # geçerli satırı koruyabilir, bu yüzden seçim modeli de denetlenir.
+        selection = self.macro_table.selectionModel()
+        if (event.key() == Qt.Key.Key_Delete
+                and not self.recording_active
+                and self.tabs.currentWidget() is self.tab_macros
+                and selection is not None
+                and selection.hasSelection()
+                and self.macro_table.currentRow() >= 0
+                and not self._focus_is_text_entry()):
+            # Odak satır içi bir düğmedeyse silme sırasında o düğme yok
+            # edilmeden önce odağı tabloya taşı.
+            self.macro_table.setFocus(Qt.FocusReason.OtherFocusReason)
+            self.delete_selected_macro()
+            return
+        super().keyPressEvent(event)
 
 
 #: Kilit dosyası adı; veri dizini kullanıcıya özel olduğundan ek SID gerekmez.
