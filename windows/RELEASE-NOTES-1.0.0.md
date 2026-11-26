@@ -1,7 +1,7 @@
 # MacroStat 1.0.0 — Windows Sürüm Notları
 
-**Durum:** sürüm adayı. İkili dosyalar `windows-latest` CI koşusunda üretilir;
-bu belge kaynak ağacındaki sürümü tarif eder.
+**Durum:** resmî **1.0.0** sürümü. İkili dosyalar `windows-latest` CI koşusunda
+üretilir; bu belge kaynak ağacındaki sürümü tarif eder.
 
 ## Öne çıkanlar
 
@@ -57,11 +57,13 @@ Get-FileHash .\MacroStat-Setup-1.0.0.exe -Algorithm SHA256
 
 ## Doğrulama
 
-- Rust: `cargo fmt --check`, `cargo clippy -D warnings`, **99** test.
-- Python: **55** GUI birim testi; Windows E2E dosyasında **7** test metodu
-  (**9** kabul senaryosu) + **5** platformdan bağımsız regresyon testi.
+- Rust: `cargo fmt --check`, `cargo clippy -D warnings`, **101** başarılı test.
+- GUI: **72** başarılı test.
+- Python (genel): **84** başarılı, **7** atlandı (Windows'a özgü E2E testleri
+  bu ortamda atlanır).
 - Ayrıntı: `windows/reports/07-e2e.md`, `windows/reports/08-final-report.md`
-  (tarihsel raporlar).
+  (tarihsel raporlar; bu raporlardaki sayılar güncel test sonuçlarını
+  yansıtmaz).
 
 ## Lisans
 
